@@ -1,0 +1,21 @@
+fastapi
+uvicorn
+pydantic
+pydantic-settings
+python-dotenv
+
+# Embeddings & Vector Store
+sentence-transformers
+qdrant-client
+
+# LLM
+langchain
+langchain-core
+langchain-groq
+
+# RAG Evaluation
+ragas
+datasets
+
+# Data processing
+pandas
