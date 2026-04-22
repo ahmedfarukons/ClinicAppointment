@@ -21,28 +21,26 @@ def _compute_feature_contributions(
 ) -> dict[str, float]:
     from app.services.intent_classifier import (
         APPOINTMENT_KEYWORDS,
-        RED_FLAG_KEYWORDS,
+        RED_FLAG_PHRASES,
         _normalize,
     )
 
     text = _normalize(message)
+    tokens = text.split()
     contributions: dict[str, float] = {}
 
-    keyword_sets: dict[str, set[str]] = {
-        "appointment_signal": APPOINTMENT_KEYWORDS,
-        "red_flag_signal": RED_FLAG_KEYWORDS,
-    }
+    for phrase in RED_FLAG_PHRASES:
+        if phrase in text:
+            contributions[f"red_flag_signal:{phrase}"] = 1.0
 
-    for label, kw_set in keyword_sets.items():
-        for kw in kw_set:
-            if kw in text:
-                contributions[f"{label}:{kw}"] = 1.0
+    for kw in APPOINTMENT_KEYWORDS:
+        if kw in tokens:
+            contributions[f"appointment_signal:{kw}"] = 1.0
 
-    tokens = text.split()
     total = len(tokens) if tokens else 1
     for token in set(tokens):
         is_appointment = token in APPOINTMENT_KEYWORDS
-        is_red_flag = any(token in flag for flag in RED_FLAG_KEYWORDS)
+        is_red_flag = any(token in flag.split() for flag in RED_FLAG_PHRASES)
         if is_appointment or is_red_flag:
             contributions[f"token_weight:{token}"] = round(1.0 / total, 4)
 
@@ -58,8 +56,9 @@ def build_explanation(
     message: str = "",
 ) -> XAIExplanation:
     safety_note = (
-        "Bu sistem bilgilendirme amaçlıdır, doktor muayenesinin yerine geçmez. "
-        "Acil durumlarda en yakın acil servise başvurun veya 112'yi arayın."
+        "This system is for informational purposes only and does not replace "
+        "a physician's examination. In emergencies, go to the nearest emergency "
+        "room or call 911."
     )
 
     retrieval_quality = _compute_retrieval_quality(sources)

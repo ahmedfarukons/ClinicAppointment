@@ -13,27 +13,26 @@ _llm = None
 def _get_llm():
     global _llm
     if _llm is None:
-        if not settings.groq_api_key:
+        if not settings.gemini_api_key:
             return None
-        from langchain_core.messages import HumanMessage, SystemMessage  # noqa: F401
-        from langchain_groq import ChatGroq
+        from langchain_google_genai import ChatGoogleGenerativeAI
 
-        _llm = ChatGroq(
+        _llm = ChatGoogleGenerativeAI(
             model=settings.llm_model,
-            api_key=settings.groq_api_key,
+            google_api_key=settings.gemini_api_key,
             temperature=0.3,
         )
     return _llm
 
 
 SYSTEM_PROMPT = """\
-Sen bir klinik bilgilendirme asistanısın. Kuralların:
-1. Yalnızca sana verilen kaynaklara (CONTEXT) dayanarak cevap ver.
-2. Kaynaklarda bulunmayan bilgiyi UYDURMA.
-3. Her cevabın sonunda hangi kaynağa dayandığını belirt.
-4. Kesin tanı veya tedavi önerme; "Bu bilgi yalnızca bilgilendirme amaçlıdır" uyarısını ekle.
-5. Acil belirti tespit edersen hastayı 112 veya acil servise yönlendir.
-6. Cevabını Türkçe ver.
+You are a clinical information assistant. Your rules:
+1. Answer ONLY based on the sources (CONTEXT) provided to you.
+2. DO NOT fabricate information that is not in the sources.
+3. At the end of each answer, cite which source(s) you relied on.
+4. Do not give a definitive diagnosis or treatment; always add the disclaimer: "This information is for informational purposes only."
+5. If you detect emergency symptoms, direct the patient to 911 or the nearest emergency room.
+6. Answer in English.
 """
 
 
@@ -41,16 +40,17 @@ def _fallback_answer(question: str, sources: list[SourceEvidence]) -> tuple[str,
     """Retrieval-only answer when no LLM API key is configured."""
     if not sources:
         return (
-            "Bu konuda güvenilir kaynak bulunamadı. "
-            "Belirtileriniz devam ederse doktorunuza başvurmanız önemlidir.",
+            "No reliable source was found for this topic. "
+            "If your symptoms persist, it is important to consult your doctor.",
             0.30,
         )
 
     top = sources[0]
     answer = (
-        f"Sorunuza en yakın kaynak bilgisi (skor: {top.score}):\n\n"
+        f"Closest source information for your question (score: {top.score}):\n\n"
         f"{top.snippet}\n\n"
-        "Bu bilgi yalnızca bilgilendirme amaçlıdır; kesin tanı için hekim değerlendirmesi gerekir."
+        "This information is for informational purposes only; "
+        "a definitive diagnosis requires physician evaluation."
     )
     avg_score = sum(s.score for s in sources) / len(sources)
     return answer, round(min(0.95, avg_score * 0.85), 2)
@@ -60,27 +60,27 @@ def generate_answer(question: str, sources: list[SourceEvidence]) -> tuple[str, 
     """Return (answer_text, confidence_estimate)."""
     if not sources:
         return (
-            "Bu konuda güvenilir kaynak bulunamadı. "
-            "Belirtileriniz devam ederse doktorunuza başvurmanız önemlidir.",
+            "No reliable source was found for this topic. "
+            "If your symptoms persist, it is important to consult your doctor.",
             0.30,
         )
 
     llm = _get_llm()
     if llm is None:
-        logger.info("GROQ_API_KEY not set, using retrieval-only fallback.")
+        logger.info("GEMINI_API_KEY not set, using retrieval-only fallback.")
         return _fallback_answer(question, sources)
 
     from langchain_core.messages import HumanMessage, SystemMessage
 
     context_block = "\n\n".join(
-        f"[Kaynak {s.id}] (skor: {s.score}): {s.snippet}" for s in sources
+        f"[Source {s.id}] (score: {s.score}): {s.snippet}" for s in sources
     )
 
     user_content = (
         f"CONTEXT:\n{context_block}\n\n"
-        f"SORU: {question}\n\n"
-        "Yukarıdaki kaynaklara dayanarak soruyu yanıtla. "
-        "Cevabında kaynak ID'lerini referans göster."
+        f"QUESTION: {question}\n\n"
+        "Answer the question based on the sources above. "
+        "Reference the source IDs in your answer."
     )
 
     response = llm.invoke([

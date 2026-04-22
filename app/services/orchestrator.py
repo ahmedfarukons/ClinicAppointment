@@ -11,14 +11,14 @@ def run_pipeline(message: str) -> ChatResponse:
 
     if route == "escalation":
         answer = (
-            "Belirttiğiniz durum acil risk içerebilir. Lütfen gecikmeden 112'yi arayın "
-            "veya en yakın acil servise başvurun."
+            "The situation you described may involve an emergency risk. "
+            "Please call 911 immediately or go to the nearest emergency room."
         )
         steps.append(
             DecisionStep(
                 step="escalation_response",
                 outcome="generated",
-                detail="Acil yönlendirme mesajı oluşturuldu, LLM atlandı.",
+                detail="Emergency redirect message generated; LLM call skipped.",
             )
         )
         xai = build_explanation(
@@ -72,7 +72,7 @@ def run_pipeline(message: str) -> ChatResponse:
     xai = build_explanation(
         route=route,
         confidence=min(route_confidence, llm_confidence),
-        rationale=f"{route_rationale} Cevap, retrieval ile bulunan kaynaklara dayandırıldı.",
+        rationale=f"{route_rationale} The answer was grounded on sources found via retrieval.",
         sources=sources,
         decision_path=steps,
         message=message,

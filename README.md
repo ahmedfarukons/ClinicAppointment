@@ -1,65 +1,65 @@
-# ChatDoctor - Klinik AI Asistanı
+# ChatDoctor - Clinical AI Assistant
 
-Klinik web asistanı: Intent Router + RAG (Qdrant) + Randevu Ajanı + Explainable AI (XAI).
+Clinical web assistant: Intent Router + RAG (Qdrant) + Appointment Agent + Explainable AI (XAI).
 
-## Mimari
+## Architecture
 
 ```
-Hasta Sorusu
+Patient Question
      |
 Intent Classifier (medical_info / appointment_request / escalation)
      |                    |                     |
-RAG Pipeline        Randevu Ajanı         Acil Yönlendirme
-(Qdrant + LLM)     (slot-filling)        (112 / acil servis)
+RAG Pipeline        Appointment Agent     Emergency Redirect
+(Qdrant + LLM)      (slot-filling)        (911 / ER)
      |                    |                     |
      +-------- XAI Explanation -----------------+
      (decision_path, feature_contributions, retrieval_quality, sources, confidence)
 ```
 
-## Kurulum
+## Setup
 
 ```bash
 pip install -r requirements.txt
 ```
 
-## Ortam Degiskenleri
+## Environment Variables
 
-`.env.example` dosyasini `.env` olarak kopyalayip GROQ_API_KEY'i ekleyin:
+Copy `.env.example` to `.env` and add your `GEMINI_API_KEY`:
 
 ```bash
 cp .env.example .env
 ```
 
-| Degisken | Aciklama | Varsayilan |
+| Variable | Description | Default |
 |---|---|---|
-| `GROQ_API_KEY` | Groq API anahtari (free tier yeterli) | (bos = fallback mod) |
-| `EMBEDDING_MODEL` | Sentence-transformers modeli | `all-MiniLM-L6-v2` |
-| `LLM_MODEL` | Groq LLM modeli | `llama-3.1-8b-instant` |
-| `QDRANT_PATH` | Yerel Qdrant veri dizini | `./qdrant_data` |
-| `COLLECTION_NAME` | Qdrant koleksiyon adi | `chatdoctor` |
+| `GEMINI_API_KEY` | Google Gemini API key (free tier works) | (empty = fallback mode) |
+| `EMBEDDING_MODEL` | Sentence-transformers model | `all-MiniLM-L6-v2` |
+| `LLM_MODEL` | Gemini model name | `gemini-1.5-flash` |
+| `QDRANT_PATH` | Local Qdrant data directory | `./qdrant_data` |
+| `COLLECTION_NAME` | Qdrant collection name | `chatdoctor` |
 
-## Veri Yukleme (Ingestion)
+## Data Ingestion
 
-ChatDoctor dataset'ini Kaggle'dan indirip Qdrant'a yukler:
+Downloads the ChatDoctor dataset from Kaggle and loads it into Qdrant:
 
 ```bash
-python -m scripts.ingest                     # tam dataset
-python -m scripts.ingest --limit 500         # hizli test icin 500 satir
-python -m scripts.ingest --csv dosya.json    # yerel dosya
+python -m scripts.ingest                     # full dataset
+python -m scripts.ingest --limit 500         # quick test with 500 rows
+python -m scripts.ingest --csv file.json     # local file
 ```
 
-## API Calistirma
+## Run the API
 
 ```bash
 uvicorn app.main:app --reload
 ```
 
-## Endpointler
+## Endpoints
 
-- `GET  /health` - saglik kontrolu
-- `POST /chat`   - ana sohbet endpoint'i
+- `GET  /health` - health check
+- `POST /chat`   - main chat endpoint
 
-### Ornek Istek
+### Example Request
 
 ```json
 {
@@ -67,16 +67,16 @@ uvicorn app.main:app --reload
 }
 ```
 
-### Ornek Cevap (XAI dahil)
+### Example Response (with XAI)
 
 ```json
 {
-  "answer": "Sorunuza en yakin kaynak bilgisi ...",
+  "answer": "Based on the retrieved source ...",
   "route": "medical_info",
   "xai": {
     "route": "medical_info",
     "confidence": 0.48,
-    "rationale": "Mesaj bilgilendirme talebi olarak siniflandirildi ...",
+    "rationale": "Message classified as an informational request ...",
     "decision_path": [
       {"step": "red_flag_check", "outcome": "clear", "detail": "..."},
       {"step": "appointment_keyword_check", "outcome": "clear", "detail": "..."},
@@ -94,35 +94,45 @@ uvicorn app.main:app --reload
       "min_score": 0.52,
       "source_count": 3.0
     },
-    "safety_note": "Bu sistem bilgilendirme amaclidir, doktor muayenesinin yerine gecmez."
+    "safety_note": "This system is for informational purposes only ..."
   }
 }
 ```
 
-## RAGAS Degerlendirme
+## RAGAS Evaluation
 
 ```bash
-python -m scripts.evaluate_ragas --samples 10
+python -m scripts.evaluate_ragas --samples 5
 ```
 
-## XAI (Explainable AI) Ozellikleri
+Uses Gemini as the judge LLM and Google text embeddings for
+`faithfulness`, `answer_relevancy`, `context_precision`, and
+`context_recall`.
 
-Her cevap su aciklanabilirlik alanlarini icerir:
+## XAI (Explainable AI) Features
 
-| Alan | Aciklama |
+Every answer includes the following explainability fields:
+
+| Field | Description |
 |---|---|
-| `decision_path` | Sistemin izledigi adimlar (red_flag_check, routing, retrieval, generation) |
-| `feature_contributions` | Hangi kelimeler/sinyaller karara ne kadar etki etti |
-| `retrieval_quality` | Retrieval metrikleri (avg/max/min skor, kaynak sayisi) |
-| `sources` | Kullanilan kaynaklar ve benzerlik skorlari |
-| `confidence` | Genel guven skoru (0-1 arasi) |
-| `safety_note` | Zorunlu medikal uyari |
+| `decision_path` | Ordered reasoning steps (red_flag_check, routing, retrieval, generation) |
+| `feature_contributions` | Which keywords/signals contributed to the decision |
+| `retrieval_quality` | Retrieval metrics (avg/max/min score, source count) |
+| `sources` | The sources used and their similarity scores |
+| `confidence` | Overall confidence score (0-1) |
+| `safety_note` | Mandatory medical disclaimer |
 
-## Teknoloji Stack
+## Tests
+
+```bash
+pytest
+```
+
+## Technology Stack
 
 - **FastAPI** - Backend API
-- **Qdrant** - Vector store (yerel, sunucusuz mod)
-- **sentence-transformers** - Embedding (all-MiniLM-L6-v2)
-- **LangChain + Groq** - LLM entegrasyonu
-- **RAGAS** - RAG kalite degerlendirmesi
-- **Pydantic** - Veri modelleme ve validasyon
+- **Qdrant** - Vector store (local, embedded mode)
+- **sentence-transformers** - Embeddings (all-MiniLM-L6-v2)
+- **LangChain + Google Gemini** - LLM integration
+- **RAGAS** - RAG quality evaluation
+- **Pydantic** - Data modeling and validation

@@ -8,10 +8,10 @@ python-dotenv
 sentence-transformers
 qdrant-client
 
-# LLM
+# LLM (Google Gemini)
 langchain
 langchain-core
-langchain-groq
+langchain-google-genai
 
 # RAG Evaluation
 ragas
@@ -19,3 +19,7 @@ datasets
 
 # Data processing
 pandas
+kagglehub
+
+# Testing
+pytest
