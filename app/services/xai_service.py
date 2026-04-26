@@ -67,9 +67,19 @@ def build_explanation(
     if decision_path is None:
         decision_path = []
 
+    # Normalize confidence to 0.0 - 1.0 range (Pydantic validation requirement)
+    # Cross-encoder results (logits) can be negative.
+    norm_conf = max(0.0, min(1.0, confidence))
+    if confidence > 1.0: 
+        norm_conf = 0.95
+    elif confidence < 0 and confidence > -10:
+        norm_conf = 0.3
+    elif confidence <= -10:
+        norm_conf = 0.1
+
     return XAIExplanation(
         route=route,
-        confidence=round(confidence, 2),
+        confidence=round(norm_conf, 2),
         rationale=rationale,
         decision_path=decision_path,
         feature_contributions=feature_contributions,

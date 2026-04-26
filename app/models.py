@@ -9,6 +9,7 @@ RouteType = Literal["medical_info", "appointment_request", "escalation"]
 class ChatRequest(BaseModel):
     message: str = Field(..., min_length=2, description="Patient question")
     patient_id: Optional[str] = None
+    session_id: Optional[str] = None
 
 
 class SourceEvidence(BaseModel):
@@ -16,6 +17,7 @@ class SourceEvidence(BaseModel):
     title: str
     snippet: str
     score: float
+    source_type: str = "chatdoctor"  # chatdoctor | guideline | drug
 
 
 class DecisionStep(BaseModel):
@@ -49,7 +51,53 @@ class XAIExplanation(BaseModel):
     safety_note: str
 
 
+class Citation(BaseModel):
+    source_id: str
+    relevance: str = ""
+
+
+class MedicalAnswer(BaseModel):
+    answer: str
+    citations: List[Citation] = Field(default_factory=list)
+    confidence_reasoning: str = ""
+    follow_up_questions: List[str] = Field(default_factory=list)
+
+
 class ChatResponse(BaseModel):
     answer: str
     route: RouteType
     xai: XAIExplanation
+    session_id: Optional[str] = None
+    structured_answer: Optional[MedicalAnswer] = None
+
+
+# --- Auth models ---
+class RegisterRequest(BaseModel):
+    username: str = Field(..., min_length=3, max_length=64)
+    password: str = Field(..., min_length=6)
+
+
+class LoginRequest(BaseModel):
+    username: str
+    password: str
+
+
+class TokenResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+
+
+# --- Session models ---
+class SessionInfo(BaseModel):
+    id: str
+    title: str
+    created_at: str
+    updated_at: str
+
+
+class MessageInfo(BaseModel):
+    id: str
+    role: str
+    content: str
+    route: Optional[str] = None
+    created_at: str

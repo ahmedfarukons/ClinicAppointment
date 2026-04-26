@@ -1,0 +1,37 @@
+version: "3.9"
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: chatdoctor-api
+    ports:
+      - "8000:8000"
+    environment:
+      GEMINI_API_KEY:     ${GEMINI_API_KEY:-}
+      EMBEDDING_MODEL:    ${EMBEDDING_MODEL:-all-MiniLM-L6-v2}
+      LLM_MODEL:          ${LLM_MODEL:-gemini-1.5-flash}
+      QDRANT_PATH:        /app/qdrant_data
+      COLLECTION_NAME:    ${COLLECTION_NAME:-chatdoctor}
+      DATABASE_PATH:      /app/data/chatdoctor.db
+      JWT_SECRET:         ${JWT_SECRET:-change-me-in-production}
+      JWT_EXPIRE_MINUTES: ${JWT_EXPIRE_MINUTES:-480}
+      RATE_LIMIT:         ${RATE_LIMIT:-30/minute}
+      LOG_LEVEL:          ${LOG_LEVEL:-INFO}
+    volumes:
+      - chatdoctor-data:/app/data
+      - chatdoctor-qdrant:/app/qdrant_data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+
+volumes:
+  chatdoctor-data:
+    driver: local
+  chatdoctor-qdrant:
+    driver: local

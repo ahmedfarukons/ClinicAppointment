@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ChatDoctor — Clinical AI Assistant</title>
+  <meta name="description" content="AI-powered clinical assistant with RAG, Intent Routing, and Explainable AI. Get evidence-based medical information and appointment scheduling." />
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+
+<!-- ── Auth overlay ─────────────────────────────────────── -->
+<div id="auth-overlay">
+  <div class="auth-card" role="dialog" aria-modal="true" aria-label="Authentication">
+    <div class="auth-logo">
+      <div class="brand-icon">🏥</div>
+      <h2>ChatDoctor</h2>
+      <p>Clinical AI Assistant</p>
+    </div>
+
+    <div class="auth-tabs" role="tablist">
+      <button class="auth-tab active" id="tab-login" role="tab" aria-selected="true" onclick="switchTab('login')">Sign In</button>
+      <button class="auth-tab"        id="tab-register" role="tab" aria-selected="false" onclick="switchTab('register')">Register</button>
+    </div>
+
+    <!-- Login form -->
+    <form id="login-form" onsubmit="handleLogin(event)" novalidate>
+      <div class="form-group">
+        <label class="form-label" for="login-username">Username</label>
+        <input class="form-input" id="login-username" type="text" placeholder="Enter username" autocomplete="username" required />
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="login-password">Password</label>
+        <input class="form-input" id="login-password" type="password" placeholder="Enter password" autocomplete="current-password" required />
+      </div>
+      <div class="auth-error" id="login-error" role="alert"></div>
+      <button class="auth-btn" id="login-btn" type="submit">Sign In</button>
+    </form>
+
+    <!-- Register form -->
+    <form id="register-form" style="display:none" onsubmit="handleRegister(event)" novalidate>
+      <div class="form-group">
+        <label class="form-label" for="reg-username">Username</label>
+        <input class="form-input" id="reg-username" type="text" placeholder="Choose a username" autocomplete="username" required />
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="reg-password">Password</label>
+        <input class="form-input" id="reg-password" type="password" placeholder="Min. 6 characters" autocomplete="new-password" required />
+      </div>
+      <div class="auth-error" id="reg-error" role="alert"></div>
+      <button class="auth-btn" id="reg-btn" type="submit">Create Account</button>
+    </form>
+  </div>
+</div>
+
+<!-- ── Main app ──────────────────────────────────────────── -->
+<div id="app">
+  <!-- Sidebar -->
+  <aside id="sidebar" role="complementary" aria-label="Chat sessions">
+    <div id="sidebar-header">
+      <div class="brand">
+        <div class="brand-icon">🏥</div>
+        <div>
+          <div class="brand-name">ChatDoctor</div>
+          <div class="brand-sub">Clinical AI</div>
+        </div>
+      </div>
+      <button id="new-chat-btn" onclick="newChat()" aria-label="Start new chat">
+        ✦ New Chat
+      </button>
+    </div>
+
+    <div id="sessions-list" role="list" aria-label="Previous sessions"></div>
+
+    <div id="sidebar-footer">
+      <div id="user-info">
+        <div class="user-avatar" id="user-avatar">?</div>
+        <span class="user-name" id="user-name-display">—</span>
+        <button id="logout-btn" onclick="logout()" aria-label="Logout">⏻</button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main chat -->
+  <main id="main" role="main">
+    <header id="chat-header">
+      <span class="chat-title" id="chat-title">New Conversation</span>
+      <span class="route-badge" id="route-badge"></span>
+    </header>
+
+    <div id="messages" role="log" aria-live="polite" aria-label="Chat messages">
+      <div class="welcome" id="welcome-screen">
+        <div class="welcome-icon">🩺</div>
+        <h2>How can I help you?</h2>
+        <p>Ask a medical question, request an appointment, or get clinical information.</p>
+        <div class="quick-prompts">
+          <button class="quick-prompt" onclick="usePrompt(this)">What are symptoms of diabetes?</button>
+          <button class="quick-prompt" onclick="usePrompt(this)">Book a cardiology appointment</button>
+          <button class="quick-prompt" onclick="usePrompt(this)">How to manage high blood pressure?</button>
+          <button class="quick-prompt" onclick="usePrompt(this)">What is hypertension?</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="input-area">
+      <div class="input-wrapper">
+        <textarea
+          id="message-input"
+          placeholder="Ask a medical question..."
+          rows="1"
+          aria-label="Message input"
+          onkeydown="handleKey(event)"
+          oninput="handleInput()"
+        ></textarea>
+        <button id="send-btn" onclick="sendMessage()" aria-label="Send message" disabled>↑</button>
+      </div>
+      <div id="char-count">0 / 1000</div>
+    </div>
+  </main>
+</div>
+
+<!-- ── Toasts ─────────────────────────────────────────────── -->
+<div id="toast-container" aria-live="assertive"></div>
+
+<script src="/static/app.js"></script>
+</body>
+</html>

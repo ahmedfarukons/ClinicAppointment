@@ -21,5 +21,26 @@ datasets
 pandas
 kagglehub
 
+# Database / ORM
+sqlalchemy
+aiosqlite
+
+# Authentication
+python-jose[cryptography]
+bcrypt
+
+# Rate Limiting
+slowapi
+
+# Structured Logging
+structlog
+
+# Linting (dev)
+ruff
+
 # Testing
 pytest
+pytest-asyncio
+
+# Numerics (for HyDE embedding blending)
+numpy
