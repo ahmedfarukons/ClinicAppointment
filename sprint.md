@@ -1,4 +1,4 @@
-# Sprint Geliştirme Günlüğü - ChatDoctor Projesi
+# Sprint Geliştirme Günlüğü -fatih karadağ- ChatDoctor Projesi
 
 Bu dosya, projenin "yanıt vermeme" sorununu gidermek ve sistemi tam kapasiteye çıkarmak için yapılan tüm çalışmaları kronolojik olarak listeler.
 
