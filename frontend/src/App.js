@@ -1,4 +1,4 @@
-import { Navigate, Route, Routes } from "react-router-dom";
+import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { useEffect, useMemo, useState } from "react";
 import "./App.css";
 import { Navbar } from "./components/Navbar";
@@ -7,6 +7,9 @@ import { Home } from "./pages/Home";
 import { Appointment } from "./pages/Appointment";
 import { AppointmentList } from "./pages/AppointmentList";
 import { AIAssistant } from "./pages/AIAssistant";
+import { AdminLogin } from "./pages/AdminLogin";
+import { AdminDashboard } from "./pages/AdminDashboard";
+import { isAdminLoggedIn } from "./services/adminService";
 
 const STORAGE_KEY = "clinic_appointments_v1";
 
@@ -26,7 +29,15 @@ const SEEDED_APPOINTMENTS = [
   { name: "Emre Demir", phone: "05550000004", date: addDaysISO(1), time: "15:30" },
 ];
 
+function AdminProtectedRoute({ children }) {
+  if (!isAdminLoggedIn()) return <Navigate to="/admin/login" replace />;
+  return children;
+}
+
 function App() {
+  const location = useLocation();
+  const isAdminPage = location.pathname.startsWith("/admin");
+
   const [appointments, setAppointments] = useState([]);
 
   useEffect(() => {
@@ -35,7 +46,6 @@ function App() {
       if (raw) setAppointments(JSON.parse(raw));
       else setAppointments(SEEDED_APPOINTMENTS);
     } catch {
-      // ignore storage issues
       setAppointments(SEEDED_APPOINTMENTS);
     }
   }, []);
@@ -43,9 +53,7 @@ function App() {
   useEffect(() => {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(appointments));
-    } catch {
-      // ignore storage issues
-    }
+    } catch {}
   }, [appointments]);
 
   const actions = useMemo(() => {
@@ -61,9 +69,9 @@ function App() {
   }, []);
 
   return (
-    <div className="appShell">
-      <Navbar />
-      <main className="appMain">
+    <div className={isAdminPage ? "adminShell" : "appShell"}>
+      {!isAdminPage && <Navbar />}
+      <main className={isAdminPage ? "" : "appMain"}>
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/ai-assistant" element={<AIAssistant />} />
@@ -85,10 +93,20 @@ function App() {
               />
             }
           />
+          {/* Admin routes */}
+          <Route path="/admin/login" element={<AdminLogin />} />
+          <Route
+            path="/admin"
+            element={
+              <AdminProtectedRoute>
+                <AdminDashboard />
+              </AdminProtectedRoute>
+            }
+          />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>
-      <Footer />
+      {!isAdminPage && <Footer />}
     </div>
   );
 }

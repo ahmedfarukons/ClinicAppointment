@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 function digitsOnly(value) {
   return (value || "").replace(/\D/g, "");
@@ -10,12 +10,10 @@ function formatPhoneNumber(value) {
   if (x.startsWith("90")) x = x.slice(2);
   if (x.startsWith("0")) x = x.slice(1);
   x = x.slice(0, 10);
-
   const p1 = x.slice(0, 3);
   const p2 = x.slice(3, 6);
   const p3 = x.slice(6, 8);
   const p4 = x.slice(8, 10);
-
   if (!x) return "";
   if (x.length <= 3) return `0 (${p1}`;
   if (x.length <= 6) return `0 (${p1}) ${p2}`;
@@ -30,16 +28,6 @@ function isValidPhone(value) {
   return false;
 }
 
-function buildErrors({ fullName, phone, date, time }) {
-  const errors = {};
-  if (!fullName.trim()) errors.fullName = "Full name is required.";
-  if (!phone.trim()) errors.phone = "Phone number is required.";
-  else if (!isValidPhone(phone)) errors.phone = "Invalid phone format. Example: 0 (5xx) xxx xx xx";
-  if (!date) errors.date = "Date is required.";
-  if (!time) errors.time = "Time is required.";
-  return errors;
-}
-
 function todayISO() {
   const now = new Date();
   const y = now.getFullYear();
@@ -50,69 +38,97 @@ function todayISO() {
 
 function buildTimeSlots() {
   const slots = [];
-  for (let h = 9; h <= 18; h++) {
+  for (let h = 9; h <= 17; h++) {
     const hh = String(h).padStart(2, "0");
     slots.push(`${hh}:00`);
-    if (h !== 18) slots.push(`${hh}:30`);
+    slots.push(`${hh}:30`);
   }
   return slots;
 }
 
 const TIME_SLOTS = buildTimeSlots();
 
-function buildBookedSet(appointments, date) {
-  const set = new Set();
-  if (!date) return set;
-  (appointments || []).forEach((a) => {
-    if (a?.date === date && a?.time) set.add(a.time);
-  });
-  return set;
-}
+const CLINIC_DATA = {
+  "Internal Medicine": {
+    icon: "🩺",
+    label: "Dahiliye",
+    doctors: ["Uzm. Dr. Ahmet Yılmaz", "Uzm. Dr. Ayşe Kaya"],
+  },
+  "Cardiology": {
+    icon: "❤️",
+    label: "Kardiyoloji",
+    doctors: ["Doç. Dr. Mehmet Demir", "Prof. Dr. Elif Çelik"],
+  },
+  "Dermatology": {
+    icon: "🧴",
+    label: "Dermatoloji",
+    doctors: ["Uzm. Dr. Can Arslan", "Uzm. Dr. Zeynep Şahin"],
+  },
+  "Laboratory": {
+    icon: "🧪",
+    label: "Laboratuvar",
+    doctors: ["Uzm. Dr. Ali Can", "Uzm. Dr. Hale Mutlu"],
+  },
+};
 
-export function AppointmentForm({ appointments, onCreated }) {
-  const [fullName, setFullName] = useState("");
-  const [phone, setPhone] = useState("");
-  const [date, setDate] = useState("");
-  const [time, setTime] = useState("");
+export function AppointmentForm({ initialDepartment, onCreated }) {
+  const [fullName, setFullName]     = useState("");
+  const [phone, setPhone]           = useState("");
+  const [date, setDate]             = useState("");
+  const [time, setTime]             = useState("");
+  const [department, setDepartment] = useState(initialDepartment || "");
+  const [doctor, setDoctor]         = useState("");
+  const [bookedTimes, setBookedTimes] = useState([]);
 
   const [touched, setTouched] = useState({
-    fullName: false,
-    phone: false,
-    date: false,
-    time: false,
+    fullName: false, phone: false, date: false, time: false,
+    department: false, doctor: false,
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submitError, setSubmitError] = useState("");
-  const [submitSuccess, setSubmitSuccess] = useState(false);
+  const [submitError, setSubmitError]   = useState("");
   const [confirmation, setConfirmation] = useState(null);
 
-  const bookedSet = useMemo(() => {
-    return buildBookedSet(appointments, date);
-  }, [appointments, date]);
+  /* When department changes, reset doctor & time */
+  useEffect(() => {
+    setDoctor("");
+    setTime("");
+  }, [department]);
+
+  /* When doctor or date changes, fetch booked slots */
+  useEffect(() => {
+    if (!date || !doctor) { setBookedTimes([]); return; }
+    fetch(`/api/appointments?date=${date}&doctor=${encodeURIComponent(doctor)}`)
+      .then((r) => r.ok ? r.json() : [])
+      .then((data) => setBookedTimes(data.map((a) => a.time)))
+      .catch(() => setBookedTimes([]));
+  }, [date, doctor]);
+
+  const bookedSet = useMemo(() => new Set(bookedTimes), [bookedTimes]);
 
   const liveErrors = useMemo(() => {
-    return buildErrors({ fullName, phone, date, time });
-  }, [fullName, phone, date, time]);
+    const e = {};
+    if (!fullName.trim())     e.fullName   = "Ad Soyad zorunludur.";
+    if (!department)          e.department = "Bölüm seçimi zorunludur.";
+    if (!doctor)              e.doctor     = "Doktor seçimi zorunludur.";
+    if (!phone.trim())        e.phone      = "Telefon numarası zorunludur.";
+    else if (!isValidPhone(phone)) e.phone = "Geçersiz telefon. Örnek: 0 (5xx) xxx xx xx";
+    if (!date)                e.date       = "Tarih seçimi zorunludur.";
+    if (!time)                e.time       = "Saat seçimi zorunludur.";
+    return e;
+  }, [fullName, phone, date, time, department, doctor]);
 
-  const canSubmit = useMemo(() => {
-    return Object.keys(liveErrors).length === 0 && !isSubmitting;
-  }, [liveErrors, isSubmitting]);
+  const canSubmit = useMemo(() =>
+    Object.keys(liveErrors).length === 0 && !isSubmitting,
+    [liveErrors, isSubmitting]
+  );
 
   async function onSubmit(e) {
     e.preventDefault();
     setSubmitError("");
-    setSubmitSuccess(false);
-    setConfirmation(null);
-
-    const nextTouched = { fullName: true, phone: true, date: true, time: true };
-    setTouched(nextTouched);
-    const errors = buildErrors({ fullName, phone, date, time });
-    if (Object.keys(errors).length > 0) {
-      return;
-    }
-
+    setTouched({ fullName: true, phone: true, date: true, time: true, department: true, doctor: true });
+    if (Object.keys(liveErrors).length > 0) return;
     if (bookedSet.has(time)) {
-      setSubmitError("The selected time slot is full. Please choose another time.");
+      setSubmitError("Bu saat dolu. Lütfen başka bir saat seçin.");
       return;
     }
 
@@ -121,221 +137,218 @@ export function AppointmentForm({ appointments, onCreated }) {
       const rawDigits = digitsOnly(phone);
       const normalizedPhone = rawDigits.startsWith("0") ? rawDigits : `0${rawDigits}`;
       const payload = {
-        name: fullName.trim(),
+        patient_name: fullName.trim(),
         phone: normalizedPhone,
         date,
         time,
+        department,
+        doctor,
       };
 
-      // Fake (local) booking: update parent state instantly
-      onCreated?.(payload);
+      const res = await fetch("/api/appointments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) {
+        let msg = "Randevu oluşturulamadı.";
+        try { msg = (await res.json()).detail || msg; } catch {}
+        throw new Error(msg);
+      }
+      const data = await res.json();
+      onCreated?.(data);
 
-      setSubmitSuccess(true);
       setConfirmation({
-        name: payload.name,
+        name: payload.patient_name,
         phoneDisplay: formatPhoneNumber(payload.phone),
         date: payload.date,
         time: payload.time,
+        department: CLINIC_DATA[payload.department]?.label || payload.department,
+        doctor: payload.doctor,
       });
-      setTouched({ fullName: false, phone: false, date: false, time: false });
-      setFullName("");
-      setPhone("");
-      setDate("");
-      setTime("");
+
+      // reset form
+      setFullName(""); setPhone(""); setDate(""); setTime(""); setDoctor("");
+      setTouched({ fullName: false, phone: false, date: false, time: false, department: false, doctor: false });
+      // refresh slots
+      setBookedTimes([]);
     } catch (err) {
-      setSubmitError(err?.message || "Appointment could not be created. Please try again.");
+      setSubmitError(err?.message || "Randevu oluşturulamadı. Lütfen tekrar deneyin.");
     } finally {
       setIsSubmitting(false);
     }
   }
 
+  const clinicDepts = Object.entries(CLINIC_DATA);
+  const availableDoctors = department ? (CLINIC_DATA[department]?.doctors || []) : [];
+
   return (
     <form className="form" onSubmit={onSubmit}>
       <div className="formGrid">
+
+        {/* Full Name */}
         <label className="field">
-          <span className="label">Full Name</span>
+          <span className="label">Ad Soyad</span>
           <div className="inputWrap">
-            <span className="inputIcon" aria-hidden="true">
-              👤
-            </span>
+            <span className="inputIcon" aria-hidden="true">👤</span>
             <input
               className={touched.fullName && liveErrors.fullName ? "input inputInvalid" : "input"}
               value={fullName}
-              onChange={(e) => {
-                setFullName(e.target.value);
-              }}
+              onChange={(e) => setFullName(e.target.value)}
               onBlur={() => setTouched((t) => ({ ...t, fullName: true }))}
-              placeholder="Example: Alex Johnson"
+              placeholder="Örnek: Ahmet Yılmaz"
               autoComplete="name"
               required
             />
           </div>
-          {touched.fullName && liveErrors.fullName ? (
-            <span className="fieldError">{liveErrors.fullName}</span>
-          ) : null}
+          {touched.fullName && liveErrors.fullName && <span className="fieldError">{liveErrors.fullName}</span>}
         </label>
 
+        {/* Phone */}
         <label className="field">
-          <span className="label">Phone</span>
+          <span className="label">Telefon</span>
           <div className="inputWrap">
-            <span className="inputIcon" aria-hidden="true">
-              📞
-            </span>
+            <span className="inputIcon" aria-hidden="true">📞</span>
             <input
               className={touched.phone && liveErrors.phone ? "input inputInvalid" : "input"}
               value={phone}
-              onChange={(e) => {
-                setPhone(formatPhoneNumber(e.target.value));
-              }}
+              onChange={(e) => setPhone(formatPhoneNumber(e.target.value))}
               onBlur={() => setTouched((t) => ({ ...t, phone: true }))}
-              placeholder="Example: 05xx xxx xx xx"
+              placeholder="Örnek: 05xx xxx xx xx"
               inputMode="tel"
               autoComplete="tel"
               required
             />
           </div>
-          {touched.phone && liveErrors.phone ? (
-            <span className="fieldError">{liveErrors.phone}</span>
-          ) : (
-            <span className="hint">Enter at least 10 digits.</span>
-          )}
+          {touched.phone && liveErrors.phone
+            ? <span className="fieldError">{liveErrors.phone}</span>
+            : <span className="hint">En az 10 rakam girin.</span>}
         </label>
 
+        {/* Department */}
+        <div className="field fieldSpan2">
+          <span className="label">Bölüm Seçin</span>
+          <div className="deptGrid">
+            {clinicDepts.map(([key, info]) => (
+              <button
+                key={key}
+                type="button"
+                className={`deptCard${department === key ? " deptCardSelected" : ""}`}
+                onClick={() => { setDepartment(key); setTouched((t) => ({ ...t, department: true })); }}
+              >
+                <span className="deptIcon">{info.icon}</span>
+                <span className="deptLabel">{info.label}</span>
+                <span className="deptSub">{key}</span>
+              </button>
+            ))}
+          </div>
+          {touched.department && liveErrors.department && <span className="fieldError">{liveErrors.department}</span>}
+        </div>
+
+        {/* Doctor Selection */}
+        {department && (
+          <div className="field fieldSpan2">
+            <span className="label">Doktor Seçin</span>
+            <div className="doctorGrid">
+              {availableDoctors.map((doc) => (
+                <button
+                  key={doc}
+                  type="button"
+                  className={`doctorCard${doctor === doc ? " doctorCardSelected" : ""}`}
+                  onClick={() => { setDoctor(doc); setTime(""); setTouched((t) => ({ ...t, doctor: true })); }}
+                >
+                  <span className="doctorAvatar">👨‍⚕️</span>
+                  <span className="doctorName">{doc}</span>
+                  <span className="doctorSpec">{CLINIC_DATA[department]?.label}</span>
+                </button>
+              ))}
+            </div>
+            {touched.doctor && liveErrors.doctor && <span className="fieldError">{liveErrors.doctor}</span>}
+          </div>
+        )}
+
+        {/* Date */}
         <label className="field">
-          <span className="label">Date</span>
+          <span className="label">Tarih</span>
           <div className="inputWrap">
-            <span className="inputIcon" aria-hidden="true">
-              📅
-            </span>
+            <span className="inputIcon" aria-hidden="true">📅</span>
             <input
               className={touched.date && liveErrors.date ? "input inputInvalid" : "input"}
               value={date}
-              onChange={(e) => {
-                setDate(e.target.value);
-                setTime("");
-              }}
+              onChange={(e) => { setDate(e.target.value); setTime(""); }}
               onBlur={() => setTouched((t) => ({ ...t, date: true }))}
               type="date"
               min={todayISO()}
               required
             />
           </div>
-          {touched.date && liveErrors.date ? (
-            <span className="fieldError">{liveErrors.date}</span>
-          ) : null}
+          {touched.date && liveErrors.date && <span className="fieldError">{liveErrors.date}</span>}
         </label>
 
+        {/* Time Slots */}
         <div className="field fieldSpan2">
           <div className="fieldHead">
-            <span className="label">Time Selection</span>
-            <div className="legend" aria-label="Time availability legend">
-              <span className="legendItem">
-                <span className="legendDot legendAvail" aria-hidden="true" />
-                Available
-              </span>
-              <span className="legendItem">
-                <span className="legendDot legendFull" aria-hidden="true" />
-                Full
-              </span>
-              <span className="legendItem">
-                <span className="legendDot legendSel" aria-hidden="true" />
-                Selected
-              </span>
+            <span className="label">Saat Seçin</span>
+            <div className="legend" aria-label="Saat durumu">
+              <span className="legendItem"><span className="legendDot legendAvail" />Müsait</span>
+              <span className="legendItem"><span className="legendDot legendFull" />Dolu</span>
+              <span className="legendItem"><span className="legendDot legendSel" />Seçili</span>
             </div>
           </div>
 
-          {!date ? (
-            <div className="hint">Please select a date first.</div>
+          {!date || !doctor ? (
+            <div className="hint">
+              {!doctor ? "Lütfen önce bir doktor seçin." : "Lütfen önce bir tarih seçin."}
+            </div>
           ) : (
-            <div className="slotGrid" role="list" aria-label="Time slots">
+            <div className="slotGrid" role="list" aria-label="Saat dilimleri">
               {TIME_SLOTS.map((slot) => {
-                const isBooked = bookedSet.has(slot);
+                const isBooked   = bookedSet.has(slot);
                 const isSelected = time === slot;
                 return (
                   <button
                     key={slot}
                     type="button"
-                    className={
-                      isBooked
-                        ? "slotBtn slotFull"
-                        : isSelected
-                          ? "slotBtn slotSelected"
-                          : "slotBtn slotAvailable"
-                    }
-                    onClick={() => {
-                      if (!isBooked) {
-                        setTime(slot);
-                        setTouched((t) => ({ ...t, time: true }));
-                        setSubmitError("");
-                      }
-                    }}
+                    className={isBooked ? "slotBtn slotFull" : isSelected ? "slotBtn slotSelected" : "slotBtn slotAvailable"}
+                    onClick={() => { if (!isBooked) { setTime(slot); setTouched((t) => ({ ...t, time: true })); setSubmitError(""); } }}
                     disabled={isBooked}
                     role="listitem"
                   >
                     <span className="slotTime">{slot}</span>
-                    {isBooked ? <span className="slotTag">Full</span> : null}
+                    {isBooked && <span className="slotTag">Dolu</span>}
                   </button>
                 );
               })}
             </div>
           )}
-
-          {touched.time && liveErrors.time ? (
-            <span className="fieldError">{liveErrors.time}</span>
-          ) : null}
+          {touched.time && liveErrors.time && <span className="fieldError">{liveErrors.time}</span>}
         </div>
       </div>
 
-      {confirmation ? (
+      {/* Confirmation card */}
+      {confirmation && (
         <div className="confirmCard" role="status" aria-live="polite">
-          <div className="confirmTitle">Confirmation Details</div>
+          <div className="confirmTitle">✅ Randevu Onaylandı</div>
           <div className="confirmGrid">
-            <div className="confirmItem">
-              <div className="confirmLabel">Full Name</div>
-              <div className="confirmValue">{confirmation.name}</div>
-            </div>
-            <div className="confirmItem">
-              <div className="confirmLabel">Phone</div>
-              <div className="confirmValue">{confirmation.phoneDisplay}</div>
-            </div>
-            <div className="confirmItem">
-              <div className="confirmLabel">Date</div>
-              <div className="confirmValue">{confirmation.date}</div>
-            </div>
-            <div className="confirmItem">
-              <div className="confirmLabel">Time</div>
-              <div className="confirmValue">{confirmation.time}</div>
-            </div>
+            <div className="confirmItem"><div className="confirmLabel">Ad Soyad</div><div className="confirmValue">{confirmation.name}</div></div>
+            <div className="confirmItem"><div className="confirmLabel">Telefon</div><div className="confirmValue">{confirmation.phoneDisplay}</div></div>
+            <div className="confirmItem"><div className="confirmLabel">Bölüm</div><div className="confirmValue">{confirmation.department}</div></div>
+            <div className="confirmItem"><div className="confirmLabel">Doktor</div><div className="confirmValue">{confirmation.doctor}</div></div>
+            <div className="confirmItem"><div className="confirmLabel">Tarih</div><div className="confirmValue">{confirmation.date}</div></div>
+            <div className="confirmItem"><div className="confirmLabel">Saat</div><div className="confirmValue">{confirmation.time}</div></div>
           </div>
         </div>
-      ) : null}
+      )}
 
-      {submitError ? <div className="alert alertError">{submitError}</div> : null}
-      {submitSuccess ? (
-        <div className="successCard" role="status" aria-live="polite">
-          <div className="successIcon" aria-hidden="true">
-            <span className="check" />
-          </div>
-          <div>
-            <div className="successTitle">Your appointment request has been received</div>
-            <div className="successText">
-              Your request was created successfully. Our team will call you shortly to confirm it.
-            </div>
-          </div>
-        </div>
-      ) : null}
+      {submitError && <div className="alert alertError">{submitError}</div>}
 
       <button className="btn btnPrimary btnLarge" disabled={!canSubmit} type="submit">
         {isSubmitting ? (
-          <>
-            <span className="spinner" aria-hidden="true" />
-            Sending...
-          </>
+          <><span className="spinner" aria-hidden="true" />Gönderiliyor...</>
         ) : (
-          "Create Appointment"
+          "Randevu Al"
         )}
       </button>
     </form>
   );
 }
-

@@ -214,11 +214,227 @@ def chat(
     return result
 
 
+# ── Appointments ──────────────────────────────────────────────────────────────
+from app.db_models import AppointmentRow
+from app.models import (
+    AdminLoginRequest, AdminStats, AdminTokenResponse,
+    AppointmentCreate, AppointmentResponse, AppointmentStatusUpdate,
+)
+from datetime import date as _date, timedelta
+import hmac, hashlib, json as _json
+
+
+def _make_admin_token() -> str:
+    import time, base64
+    payload = _json.dumps({"role": "admin", "exp": int(time.time()) + 86400 * 7})
+    sig = hmac.new(settings.jwt_secret.encode(), payload.encode(), hashlib.sha256).hexdigest()
+    return base64.b64encode(f"{payload}.{sig}".encode()).decode()
+
+
+def _verify_admin_token(authorization: str | None) -> bool:
+    if not authorization or not authorization.startswith("Bearer "):
+        return False
+    import base64, time
+    try:
+        raw = base64.b64decode(authorization.removeprefix("Bearer ").strip()).decode()
+        payload_str, sig = raw.rsplit(".", 1)
+        expected = hmac.new(settings.jwt_secret.encode(), payload_str.encode(), hashlib.sha256).hexdigest()
+        if not hmac.compare_digest(sig, expected):
+            return False
+        payload = _json.loads(payload_str)
+        return payload.get("role") == "admin" and payload.get("exp", 0) > time.time()
+    except Exception:
+        return False
+
+
+def _admin_guard(authorization: Annotated[str | None, Header()] = None) -> None:
+    if not _verify_admin_token(authorization):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Admin token required")
+
+
+def _row_to_response(r: AppointmentRow) -> AppointmentResponse:
+    return AppointmentResponse(
+        id=r.id,
+        patient_name=r.patient_name,
+        phone=r.phone,
+        date=r.date,
+        time=r.time,
+        department=r.department,
+        doctor=r.doctor,
+        status=r.status,
+        created_at=r.created_at.isoformat(),
+    )
+
+
+# ── Public Appointments ───────────────────────────────────────────────────────
+@app.get("/api/appointments", response_model=list[AppointmentResponse], tags=["Appointments"])
+def get_appointments(
+    date: str | None = None,
+    department: str | None = None,
+    doctor: str | None = None,
+    db: Session = Depends(get_db),
+) -> list[AppointmentResponse]:
+    query = db.query(AppointmentRow)
+    if date:
+        query = query.filter(AppointmentRow.date == date)
+    if department:
+        query = query.filter(AppointmentRow.department == department)
+    if doctor:
+        query = query.filter(AppointmentRow.doctor == doctor)
+    return [_row_to_response(r) for r in query.all()]
+
+
+@app.post("/api/appointments", response_model=AppointmentResponse, tags=["Appointments"])
+def create_appointment(
+    payload: AppointmentCreate,
+    request: Request,
+    db: Session = Depends(get_db),
+) -> AppointmentResponse:
+    existing = db.query(AppointmentRow).filter(
+        AppointmentRow.date == payload.date,
+        AppointmentRow.time == payload.time,
+        AppointmentRow.doctor == payload.doctor,
+    ).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="Bu doktor bu saatte zaten dolu. Lütfen başka bir saat veya doktor seçin.")
+
+    user_id = None
+    auth = request.headers.get("Authorization")
+    if auth and auth.startswith("Bearer "):
+        token = auth.removeprefix("Bearer ").strip()
+        user_id = auth_service.decode_token(token)
+
+    row = AppointmentRow(
+        user_id=user_id,
+        patient_name=payload.patient_name,
+        phone=payload.phone,
+        date=payload.date,
+        time=payload.time,
+        department=payload.department,
+        doctor=payload.doctor,
+        status="pending",
+    )
+    db.add(row)
+    db.commit()
+    db.refresh(row)
+    return _row_to_response(row)
+
+
+# ── Admin Auth ────────────────────────────────────────────────────────────────
+@app.post("/admin/login", response_model=AdminTokenResponse, tags=["Admin"])
+def admin_login(payload: AdminLoginRequest) -> AdminTokenResponse:
+    admin_user = os.environ.get("ADMIN_USERNAME", "admin")
+    admin_pass = os.environ.get("ADMIN_PASSWORD", "clinic2024")
+    if payload.username != admin_user or payload.password != admin_pass:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Geçersiz admin kimlik bilgileri")
+    return AdminTokenResponse(access_token=_make_admin_token())
+
+
+# ── Admin Stats ───────────────────────────────────────────────────────────────
+@app.get("/admin/stats", response_model=AdminStats, tags=["Admin"])
+def admin_stats(
+    _: None = Depends(_admin_guard),
+    db: Session = Depends(get_db),
+) -> AdminStats:
+    all_rows = db.query(AppointmentRow).all()
+    today_str = _date.today().isoformat()
+    week_start = (_date.today() - timedelta(days=_date.today().weekday())).isoformat()
+
+    by_dept: dict[str, int] = {}
+    by_status: dict[str, int] = {}
+    today_count = 0
+    week_count = 0
+
+    for r in all_rows:
+        dept = r.department or "Diğer"
+        by_dept[dept] = by_dept.get(dept, 0) + 1
+        st = r.status or "pending"
+        by_status[st] = by_status.get(st, 0) + 1
+        if r.date == today_str:
+            today_count += 1
+        if r.date >= week_start:
+            week_count += 1
+
+    return AdminStats(
+        total=len(all_rows),
+        today=today_count,
+        this_week=week_count,
+        by_department=by_dept,
+        by_status=by_status,
+    )
+
+
+# ── Admin Appointments ────────────────────────────────────────────────────────
+@app.get("/admin/appointments", response_model=list[AppointmentResponse], tags=["Admin"])
+def admin_list_appointments(
+    date: str | None = None,
+    department: str | None = None,
+    doctor: str | None = None,
+    search: str | None = None,
+    appt_status: str | None = None,
+    _: None = Depends(_admin_guard),
+    db: Session = Depends(get_db),
+) -> list[AppointmentResponse]:
+    query = db.query(AppointmentRow)
+    if date:
+        query = query.filter(AppointmentRow.date == date)
+    if department:
+        query = query.filter(AppointmentRow.department == department)
+    if doctor:
+        query = query.filter(AppointmentRow.doctor == doctor)
+    if appt_status:
+        query = query.filter(AppointmentRow.status == appt_status)
+    rows = query.order_by(AppointmentRow.date.asc(), AppointmentRow.time.asc()).all()
+    if search:
+        s = search.lower()
+        rows = [r for r in rows if s in r.patient_name.lower() or s in (r.phone or "")]
+    return [_row_to_response(r) for r in rows]
+
+
+@app.patch("/admin/appointments/{appt_id}/status", response_model=AppointmentResponse, tags=["Admin"])
+def admin_update_status(
+    appt_id: str,
+    payload: AppointmentStatusUpdate,
+    _: None = Depends(_admin_guard),
+    db: Session = Depends(get_db),
+) -> AppointmentResponse:
+    if payload.status not in ("pending", "confirmed", "cancelled"):
+        raise HTTPException(status_code=400, detail="Geçersiz durum değeri")
+    row = db.query(AppointmentRow).filter(AppointmentRow.id == appt_id).first()
+    if not row:
+        raise HTTPException(status_code=404, detail="Randevu bulunamadı")
+    row.status = payload.status
+    db.commit()
+    db.refresh(row)
+    return _row_to_response(row)
+
+
+@app.delete("/admin/appointments/{appt_id}", tags=["Admin"])
+def admin_delete_appointment(
+    appt_id: str,
+    _: None = Depends(_admin_guard),
+    db: Session = Depends(get_db),
+) -> dict:
+    row = db.query(AppointmentRow).filter(AppointmentRow.id == appt_id).first()
+    if not row:
+        raise HTTPException(status_code=404, detail="Randevu bulunamadı")
+    db.delete(row)
+    db.commit()
+    return {"status": "deleted", "id": appt_id}
+
+
 # ── Static files (Frontend) ───────────────────────────────────────────────────
 _static_dir = os.path.join(os.path.dirname(__file__), "static")
 if os.path.isdir(_static_dir):
     app.mount("/static", StaticFiles(directory=_static_dir), name="static")
 
-    @app.get("/", include_in_schema=False)
-    def serve_index() -> FileResponse:
+    @app.get("/{full_path:path}", include_in_schema=False)
+    def serve_index(full_path: str) -> FileResponse:
+        # Eğer istek bir API veya static dosya değilse index.html döndür
+        if full_path.startswith("api/") or full_path.startswith("admin/") or full_path.startswith("static/"):
+             # Bunlar zaten kendi handler'larına sahip, buraya girerse 404'tür ama
+             # React Router için /admin/login gibi adresleri korumalıyız
+             pass
         return FileResponse(os.path.join(_static_dir, "index.html"))
+
+

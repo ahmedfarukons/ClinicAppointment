@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Link } from "react-router-dom";
 import {
   clearStoredAuth,
   deleteSession,
@@ -13,10 +14,10 @@ import {
 import { ApiError } from "../services/api";
 
 const QUICK_PROMPTS = [
-  "When should I see a doctor for a headache?",
-  "I want to book a cardiology appointment",
-  "What should I watch for with high blood pressure?",
-  "What are the symptoms of diabetes?",
+  "Baş ağrısı için ne zaman doktora gitmeliyim?",
+  "Kardiyoloji randevusu almak istiyorum",
+  "Cildimde kızarıklık ve kaşıntı var",
+  "Kan tahlili yaptırmak istiyorum",
 ];
 
 const ROUTE_LABELS = {
@@ -230,6 +231,22 @@ function MessageList({ messages, sending }) {
               <span className={`routePill ${message.route}`}>{routeLabel(message.route)}</span>
             ) : null}
             <div className="aiBubble">{message.content}</div>
+            
+            {message.suggested_department ? (
+              <div className="appointmentCTA">
+                <div className="appointmentCTAText">
+                  🏥 <strong>{message.suggested_department}</strong> bölümünden randevu alabilirsiniz.
+                </div>
+                <Link
+                  to={`/appointment?department=${encodeURIComponent(message.suggested_department)}`}
+                  className="btn btnPrimary"
+                  style={{ display: "inline-flex", alignItems: "center", gap: "8px", marginTop: "8px" }}
+                >
+                  📅 Randevu Al
+                </Link>
+              </div>
+            ) : null}
+
             <Explainability xai={message.xai} structuredAnswer={message.structured_answer} />
           </div>
         </article>
@@ -384,6 +401,7 @@ export function AIAssistant() {
           route: result.route,
           xai: result.xai,
           structured_answer: result.structured_answer,
+          suggested_department: result.suggested_department,
         },
       ]);
       await refreshSessions();

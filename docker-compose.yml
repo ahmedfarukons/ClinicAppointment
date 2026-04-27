@@ -1,6 +1,21 @@
 version: "3.9"
 
 services:
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: clinic-frontend
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    depends_on:
+      - app
+    environment:
+      - WATCHPACK_POLLING=true
+
   app:
     build:
       context: .
@@ -19,6 +34,8 @@ services:
       JWT_EXPIRE_MINUTES: ${JWT_EXPIRE_MINUTES:-480}
       RATE_LIMIT:         ${RATE_LIMIT:-30/minute}
       LOG_LEVEL:          ${LOG_LEVEL:-INFO}
+      ADMIN_USERNAME:     ${ADMIN_USERNAME:-admin}
+      ADMIN_PASSWORD:     ${ADMIN_PASSWORD:-clinic2024}
     volumes:
       - chatdoctor-data:/app/data
       - chatdoctor-qdrant:/app/qdrant_data

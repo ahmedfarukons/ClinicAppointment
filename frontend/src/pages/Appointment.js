@@ -1,7 +1,11 @@
 import { AppointmentForm } from "../components/AppointmentForm";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 
-export function Appointment({ appointments, onAppointmentCreated }) {
+export function Appointment({ onAppointmentCreated }) {
+  const location = useLocation();
+  const searchParams = new URLSearchParams(location.search);
+  const selectedDepartment = searchParams.get("department");
+
   return (
     <div className="page">
       <section className="pageHead">
@@ -29,7 +33,7 @@ export function Appointment({ appointments, onAppointmentCreated }) {
                 All fields are required.
               </div>
             </div>
-            <AppointmentForm appointments={appointments} onCreated={onAppointmentCreated} />
+            <AppointmentForm initialDepartment={selectedDepartment} onCreated={onAppointmentCreated} />
           </div>
         </div>
       </section>

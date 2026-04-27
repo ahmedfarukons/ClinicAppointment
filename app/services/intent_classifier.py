@@ -18,17 +18,10 @@ def _tokens(text: str) -> set[str]:
 
 
 APPOINTMENT_KEYWORDS = {
-    "appointment",
-    "schedule",
-    "book",
-    "booking",
-    "reserve",
-    "visit",
-    "consultation",
-    "doctor",
-    "physician",
-    "clinic",
-    "department",
+    "appointment", "schedule", "book", "booking", "reserve", "visit", 
+    "consultation", "doctor", "physician", "clinic", "department",
+    "randevu", "doktor", "klinik", "bölüm", "muayene", "görünmek",
+    "al", "almak", "istiyorum", "ayarla"
 }
 
 # Multi-word red-flag phrases (substring match on normalized text).

@@ -50,7 +50,7 @@ def run_pipeline(
 
     # --- Appointment request ---
     if route == "appointment_request":
-        answer, sources, conf, rationale = handle_appointment(message)
+        answer, sources, conf, rationale, department = handle_appointment(message)
         steps.append(DecisionStep(
             step="appointment_slot_filling",
             outcome="processed",
@@ -61,7 +61,13 @@ def run_pipeline(
             rationale=f"{route_rationale} {rationale}",
             sources=sources, decision_path=steps, message=message,
         )
-        return ChatResponse(answer=answer, route=route, xai=xai, session_id=session_id)
+        return ChatResponse(
+            answer=answer, 
+            route=route, 
+            xai=xai, 
+            session_id=session_id,
+            suggested_department=department
+        )
 
     # --- Medical info: full RAG pipeline ---
 
@@ -141,6 +147,16 @@ def run_pipeline(
             follow_up_questions=structured.follow_up_questions,
         )
 
+    # Attempt to extract department from medical symptom info so they can directly book
+    from app.services.appointment_agent import _extract_department
+    department = _extract_department(message)
+    if department:
+        steps.append(DecisionStep(
+            step="symptom_triage",
+            outcome="department_detected",
+            detail=f"Detected {department} from symptoms.",
+        ))
+
     logger.info("pipeline_completed", route=route, sources=len(sources))
     return ChatResponse(
         answer=answer,
@@ -148,4 +164,5 @@ def run_pipeline(
         xai=xai,
         session_id=session_id,
         structured_answer=med_answer,
+        suggested_department=department
     )

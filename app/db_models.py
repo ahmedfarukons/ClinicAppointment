@@ -58,3 +58,18 @@ class MessageRow(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
 
     session: Mapped["SessionRow"] = relationship(back_populates="messages")
+
+
+class AppointmentRow(Base):
+    __tablename__ = "appointments"
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=_new_id)
+    user_id: Mapped[str | None] = mapped_column(String(32), ForeignKey("users.id"), nullable=True, index=True)
+    patient_name: Mapped[str] = mapped_column(String(100), nullable=False)
+    phone: Mapped[str] = mapped_column(String(20), nullable=False)
+    date: Mapped[str] = mapped_column(String(20), nullable=False)
+    time: Mapped[str] = mapped_column(String(20), nullable=False)
+    department: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    doctor: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    status: Mapped[str] = mapped_column(String(20), nullable=False, default="pending")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)

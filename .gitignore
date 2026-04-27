@@ -1,7 +1,18 @@
-.venv/
+# Python
 __pycache__/
-.pytest_cache/
-*.pyc
+*.py[cod]
+*$py.class
+venv/
 .env
+
+# Database
+data/*.db
 qdrant_data/
-evaluation_results.json
+
+# Frontend
+frontend/node_modules/
+frontend/build/
+.DS_Store
+
+# Docker
+docker-compose.override.yml

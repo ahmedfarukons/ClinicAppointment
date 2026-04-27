@@ -532,6 +532,100 @@
   border-color: rgba(29, 116, 245, 0.35);
 }
 
+/* Department selection grid */
+.deptGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 6px;
+}
+.deptCard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 14px 10px;
+  background: rgba(255, 255, 255, 0.85);
+  border: 2px solid rgba(15, 35, 55, 0.10);
+  border-radius: 18px;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 160ms ease;
+  text-align: center;
+}
+.deptCard:hover {
+  border-color: rgba(29, 116, 245, 0.30);
+  background: rgba(29, 116, 245, 0.05);
+  transform: translateY(-2px);
+  box-shadow: 0 10px 20px rgba(29, 116, 245, 0.10);
+}
+.deptCardSelected {
+  border-color: rgba(29, 116, 245, 0.60) !important;
+  background: rgba(29, 116, 245, 0.10) !important;
+  box-shadow: 0 0 0 4px rgba(29, 116, 245, 0.15) !important;
+}
+.deptIcon {
+  font-size: 26px;
+}
+.deptLabel {
+  font-weight: 900;
+  font-size: 13px;
+  letter-spacing: -0.01em;
+}
+.deptSub {
+  font-weight: 600;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+/* Doctor selection */
+.doctorGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 6px;
+}
+.doctorCard {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px;
+  background: rgba(255, 255, 255, 0.85);
+  border: 2px solid rgba(15, 35, 55, 0.10);
+  border-radius: 18px;
+  cursor: pointer;
+  font-family: inherit;
+  text-align: left;
+  transition: all 160ms ease;
+}
+.doctorCard:hover {
+  border-color: rgba(29, 116, 245, 0.30);
+  background: rgba(29, 116, 245, 0.05);
+  transform: translateY(-2px);
+  box-shadow: 0 10px 20px rgba(29, 116, 245, 0.10);
+}
+.doctorCardSelected {
+  border-color: rgba(29, 116, 245, 0.60) !important;
+  background: rgba(29, 116, 245, 0.10) !important;
+  box-shadow: 0 0 0 4px rgba(29, 116, 245, 0.15) !important;
+}
+.doctorAvatar {
+  font-size: 28px;
+  flex: 0 0 auto;
+}
+.doctorName {
+  display: block;
+  font-weight: 900;
+  font-size: 13px;
+  letter-spacing: -0.01em;
+}
+.doctorSpec {
+  display: block;
+  font-size: 11px;
+  color: var(--muted);
+  font-weight: 600;
+  margin-top: 2px;
+}
 .slotGrid {
   display: grid;
   grid-template-columns: repeat(6, minmax(0, 1fr));
@@ -897,6 +991,23 @@
   background: rgba(59, 214, 122, 0.10);
   border-color: rgba(59, 214, 122, 0.22);
   color: #156f3a;
+}
+
+/* Appointment CTA in chat bubble */
+.appointmentCTA {
+  margin-top: 12px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, rgba(29, 116, 245, 0.10), rgba(58, 167, 255, 0.07));
+  border: 1px solid rgba(29, 116, 245, 0.22);
+  animation: fadeUp 300ms ease both;
+}
+.appointmentCTAText {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1.4;
+  margin-bottom: 4px;
 }
 
 /* AI assistant */
@@ -1414,5 +1525,372 @@
   }
   .aiComposer {
     grid-template-columns: 1fr;
+  }
+}
+
+/* ════════════════════════════════════════════════════════════
+   ADMIN PANEL STYLES
+   ════════════════════════════════════════════════════════════ */
+
+/* ── Shell ─────────────────────────────────────────────────── */
+.adminShell {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #f0f4ff 0%, #e8f5ff 100%);
+}
+
+/* ── Admin Login Page ──────────────────────────────────────── */
+.adminLoginPage {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: linear-gradient(135deg, #0b1b2b 0%, #1a3a5c 60%, #1d74f5 100%);
+}
+.adminLoginCard {
+  background: rgba(255, 255, 255, 0.96);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  border-radius: 28px;
+  padding: 40px 36px;
+  width: 100%;
+  max-width: 420px;
+  box-shadow: 0 32px 80px rgba(0, 0, 0, 0.30);
+  animation: fadeUp 300ms ease both;
+}
+.adminLoginBrand {
+  text-align: center;
+  margin-bottom: 28px;
+}
+.adminLoginLogo {
+  font-size: 52px;
+  line-height: 1;
+  margin-bottom: 10px;
+}
+.adminLoginTitle {
+  font-size: 22px;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  margin: 0 0 6px;
+}
+.adminLoginSub {
+  color: var(--muted);
+  font-size: 14px;
+}
+.adminLoginForm {
+  display: grid;
+  gap: 12px;
+}
+.adminLoginFooter {
+  text-align: center;
+  color: var(--muted);
+  font-size: 12px;
+  margin-top: 20px;
+}
+
+/* ── Admin Dashboard ───────────────────────────────────────── */
+.adminDash {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+.adminHeader {
+  background: rgba(255, 255, 255, 0.95);
+  border-bottom: 1px solid var(--border);
+  box-shadow: 0 2px 12px rgba(10, 30, 60, 0.07);
+  padding: 14px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  backdrop-filter: blur(12px);
+}
+.adminHeaderLeft {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.adminHeaderLogo {
+  font-size: 32px;
+}
+.adminHeaderTitle {
+  font-weight: 900;
+  font-size: 18px;
+  letter-spacing: -0.02em;
+}
+.adminHeaderSub {
+  font-size: 12px;
+  color: var(--muted);
+  font-weight: 600;
+}
+.adminHeaderRight {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+.adminRefreshBtn {
+  background: rgba(29, 116, 245, 0.08);
+  border: 1px solid rgba(29, 116, 245, 0.18);
+  color: var(--primary-600);
+}
+.adminLogoutBtn {
+  background: rgba(255, 71, 87, 0.08);
+  border: 1px solid rgba(255, 71, 87, 0.18);
+  color: #b01d2b;
+}
+.adminContent {
+  padding: 24px;
+  display: grid;
+  gap: 20px;
+  max-width: 1400px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+/* ── Stat Cards ────────────────────────────────────────────── */
+.adminStatsRow {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 12px;
+}
+.adminStatCard {
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 16px;
+  text-align: center;
+  box-shadow: 0 4px 16px rgba(10, 30, 60, 0.06);
+  transition: transform 160ms ease, box-shadow 160ms ease;
+}
+.adminStatCard:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 28px rgba(10, 30, 60, 0.10);
+}
+.adminStatIcon {
+  font-size: 24px;
+  margin-bottom: 6px;
+}
+.adminStatValue {
+  font-size: 28px;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  color: var(--primary-600);
+}
+.adminStatLabel {
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--text);
+  margin-top: 2px;
+}
+.adminStatSub {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+/* ── Department Bars ───────────────────────────────────────── */
+.adminDeptBars {
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 16px 20px;
+  display: grid;
+  gap: 10px;
+  box-shadow: 0 4px 16px rgba(10, 30, 60, 0.06);
+}
+.adminDeptBar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.adminDeptBarIcon {
+  font-size: 18px;
+  flex: 0 0 28px;
+}
+.adminDeptBarName {
+  font-size: 13px;
+  font-weight: 800;
+  flex: 0 0 100px;
+}
+.adminDeptBarTrack {
+  flex: 1;
+  height: 8px;
+  background: rgba(15, 35, 55, 0.07);
+  border-radius: 999px;
+  overflow: hidden;
+}
+.adminDeptBarFill {
+  height: 100%;
+  background: linear-gradient(90deg, #1d74f5, #3aa7ff);
+  border-radius: 999px;
+  transition: width 600ms ease;
+}
+.adminDeptBarCount {
+  font-size: 13px;
+  font-weight: 900;
+  color: var(--primary-600);
+  flex: 0 0 28px;
+  text-align: right;
+}
+
+/* ── Filters ───────────────────────────────────────────────── */
+.adminFilters {
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 16px 20px;
+  box-shadow: 0 4px 16px rgba(10, 30, 60, 0.06);
+  display: grid;
+  gap: 12px;
+}
+.adminFiltersRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: flex-end;
+}
+.adminFiltersActions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+/* ── Status Badges ─────────────────────────────────────────── */
+.statusBadge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 800;
+}
+.statusPending {
+  background: rgba(255, 190, 50, 0.15);
+  border: 1px solid rgba(255, 190, 50, 0.35);
+  color: #8a6000;
+}
+.statusConfirmed {
+  background: rgba(59, 214, 122, 0.15);
+  border: 1px solid rgba(59, 214, 122, 0.35);
+  color: #156f3a;
+}
+.statusCancelled {
+  background: rgba(255, 71, 87, 0.12);
+  border: 1px solid rgba(255, 71, 87, 0.28);
+  color: #b01d2b;
+}
+
+/* ── Action Buttons ────────────────────────────────────────── */
+.adminActions {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+.adminActionBtn {
+  width: 30px;
+  height: 30px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  font-size: 14px;
+  display: grid;
+  place-items: center;
+  transition: transform 120ms ease, background 120ms ease;
+  font-family: inherit;
+}
+.adminActionBtn:hover {
+  transform: scale(1.12);
+}
+.adminActionConfirm {
+  background: rgba(59, 214, 122, 0.15);
+  border-color: rgba(59, 214, 122, 0.30);
+  color: #156f3a;
+}
+.adminActionCancel {
+  background: rgba(255, 190, 50, 0.15);
+  border-color: rgba(255, 190, 50, 0.30);
+  color: #8a6000;
+}
+.adminActionPending {
+  background: rgba(29, 116, 245, 0.10);
+  border-color: rgba(29, 116, 245, 0.25);
+  color: var(--primary-600);
+}
+.adminActionDelete {
+  background: rgba(255, 71, 87, 0.10);
+  border-color: rgba(255, 71, 87, 0.22);
+  color: #b01d2b;
+}
+
+/* ── Loading Row ───────────────────────────────────────────── */
+.adminLoadingRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 32px 20px;
+  color: var(--muted);
+  font-weight: 700;
+}
+
+/* ── Delete Modal ──────────────────────────────────────────── */
+.adminModal {
+  position: fixed;
+  inset: 0;
+  background: rgba(10, 20, 40, 0.55);
+  display: grid;
+  place-items: center;
+  z-index: 1000;
+  backdrop-filter: blur(4px);
+  animation: fadeUp 200ms ease both;
+}
+.adminModalCard {
+  background: #ffffff;
+  border-radius: 24px;
+  padding: 28px 28px 24px;
+  max-width: 380px;
+  width: 100%;
+  margin: 16px;
+  box-shadow: 0 32px 80px rgba(0, 0, 0, 0.25);
+  text-align: center;
+  animation: fadeUp 220ms ease both;
+}
+.adminModalIcon {
+  font-size: 44px;
+  margin-bottom: 12px;
+}
+.adminModalTitle {
+  font-size: 18px;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  margin-bottom: 8px;
+}
+.adminModalText {
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.55;
+  margin-bottom: 20px;
+}
+.adminModalActions {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
+
+/* ── Responsive ────────────────────────────────────────────── */
+@media (max-width: 900px) {
+  .adminStatsRow {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+@media (max-width: 600px) {
+  .adminStatsRow {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .adminContent {
+    padding: 14px;
+  }
+  .adminHeader {
+    padding: 12px 14px;
   }
 }

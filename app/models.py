@@ -69,6 +69,7 @@ class ChatResponse(BaseModel):
     xai: XAIExplanation
     session_id: Optional[str] = None
     structured_answer: Optional[MedicalAnswer] = None
+    suggested_department: Optional[str] = None
 
 
 # --- Auth models ---
@@ -101,3 +102,48 @@ class MessageInfo(BaseModel):
     content: str
     route: Optional[str] = None
     created_at: str
+
+
+# --- Appointment models ---
+class AppointmentCreate(BaseModel):
+    patient_name: str
+    phone: str
+    date: str
+    time: str
+    department: Optional[str] = None
+    doctor: Optional[str] = None
+
+
+class AppointmentResponse(BaseModel):
+    id: str
+    patient_name: str
+    phone: str
+    date: str
+    time: str
+    department: Optional[str] = None
+    doctor: Optional[str] = None
+    status: str = "pending"
+    created_at: str
+
+
+# --- Admin models ---
+class AdminLoginRequest(BaseModel):
+    username: str
+    password: str
+
+
+class AdminTokenResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+
+
+class AppointmentStatusUpdate(BaseModel):
+    status: str  # "pending" | "confirmed" | "cancelled"
+
+
+class AdminStats(BaseModel):
+    total: int
+    today: int
+    this_week: int
+    by_department: dict
+    by_status: dict
