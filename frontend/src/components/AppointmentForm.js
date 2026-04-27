@@ -51,22 +51,26 @@ const TIME_SLOTS = buildTimeSlots();
 const CLINIC_DATA = {
   "Internal Medicine": {
     icon: "🩺",
-    label: "Dahiliye",
+    label: "Internal Medicine",
+    trLabel: "Dahiliye",
     doctors: ["Uzm. Dr. Ahmet Yılmaz", "Uzm. Dr. Ayşe Kaya"],
   },
   "Cardiology": {
     icon: "❤️",
-    label: "Kardiyoloji",
+    label: "Cardiology",
+    trLabel: "Kardiyoloji",
     doctors: ["Doç. Dr. Mehmet Demir", "Prof. Dr. Elif Çelik"],
   },
   "Dermatology": {
     icon: "🧴",
-    label: "Dermatoloji",
+    label: "Dermatology",
+    trLabel: "Dermatoloji",
     doctors: ["Uzm. Dr. Can Arslan", "Uzm. Dr. Zeynep Şahin"],
   },
   "Laboratory": {
     icon: "🧪",
-    label: "Laboratuvar",
+    label: "Laboratory",
+    trLabel: "Laboratuvar",
     doctors: ["Uzm. Dr. Ali Can", "Uzm. Dr. Hale Mutlu"],
   },
 };
@@ -107,13 +111,13 @@ export function AppointmentForm({ initialDepartment, onCreated }) {
 
   const liveErrors = useMemo(() => {
     const e = {};
-    if (!fullName.trim())     e.fullName   = "Ad Soyad zorunludur.";
-    if (!department)          e.department = "Bölüm seçimi zorunludur.";
-    if (!doctor)              e.doctor     = "Doktor seçimi zorunludur.";
-    if (!phone.trim())        e.phone      = "Telefon numarası zorunludur.";
-    else if (!isValidPhone(phone)) e.phone = "Geçersiz telefon. Örnek: 0 (5xx) xxx xx xx";
-    if (!date)                e.date       = "Tarih seçimi zorunludur.";
-    if (!time)                e.time       = "Saat seçimi zorunludur.";
+    if (!fullName.trim())     e.fullName   = "Full name is required.";
+    if (!department)          e.department = "Department selection is required.";
+    if (!doctor)              e.doctor     = "Doctor selection is required.";
+    if (!phone.trim())        e.phone      = "Phone number is required.";
+    else if (!isValidPhone(phone)) e.phone = "Invalid phone format. Example: 0 (5xx) xxx xx xx";
+    if (!date)                e.date       = "Date selection is required.";
+    if (!time)                e.time       = "Time selection is required.";
     return e;
   }, [fullName, phone, date, time, department, doctor]);
 
@@ -128,7 +132,7 @@ export function AppointmentForm({ initialDepartment, onCreated }) {
     setTouched({ fullName: true, phone: true, date: true, time: true, department: true, doctor: true });
     if (Object.keys(liveErrors).length > 0) return;
     if (bookedSet.has(time)) {
-      setSubmitError("Bu saat dolu. Lütfen başka bir saat seçin.");
+      setSubmitError("This time slot is already full. Please choose another slot.");
       return;
     }
 
@@ -151,7 +155,7 @@ export function AppointmentForm({ initialDepartment, onCreated }) {
         body: JSON.stringify(payload),
       });
       if (!res.ok) {
-        let msg = "Randevu oluşturulamadı.";
+        let msg = "Failed to create appointment.";
         try { msg = (await res.json()).detail || msg; } catch {}
         throw new Error(msg);
       }
@@ -173,7 +177,7 @@ export function AppointmentForm({ initialDepartment, onCreated }) {
       // refresh slots
       setBookedTimes([]);
     } catch (err) {
-      setSubmitError(err?.message || "Randevu oluşturulamadı. Lütfen tekrar deneyin.");
+      setSubmitError(err?.message || "Failed to create appointment. Please try again.");
     } finally {
       setIsSubmitting(false);
     }
@@ -188,7 +192,7 @@ export function AppointmentForm({ initialDepartment, onCreated }) {
 
         {/* Full Name */}
         <label className="field">
-          <span className="label">Ad Soyad</span>
+          <span className="label">Full Name<br /><small>Ad Soyad</small></span>
           <div className="inputWrap">
             <span className="inputIcon" aria-hidden="true">👤</span>
             <input
@@ -196,7 +200,7 @@ export function AppointmentForm({ initialDepartment, onCreated }) {
               value={fullName}
               onChange={(e) => setFullName(e.target.value)}
               onBlur={() => setTouched((t) => ({ ...t, fullName: true }))}
-              placeholder="Örnek: Ahmet Yılmaz"
+              placeholder="Example: Ahmet Yılmaz"
               autoComplete="name"
               required
             />
@@ -206,7 +210,7 @@ export function AppointmentForm({ initialDepartment, onCreated }) {
 
         {/* Phone */}
         <label className="field">
-          <span className="label">Telefon</span>
+          <span className="label">Phone<br /><small>Telefon</small></span>
           <div className="inputWrap">
             <span className="inputIcon" aria-hidden="true">📞</span>
             <input
@@ -214,7 +218,7 @@ export function AppointmentForm({ initialDepartment, onCreated }) {
               value={phone}
               onChange={(e) => setPhone(formatPhoneNumber(e.target.value))}
               onBlur={() => setTouched((t) => ({ ...t, phone: true }))}
-              placeholder="Örnek: 05xx xxx xx xx"
+              placeholder="Example: 05xx xxx xx xx"
               inputMode="tel"
               autoComplete="tel"
               required
@@ -222,12 +226,12 @@ export function AppointmentForm({ initialDepartment, onCreated }) {
           </div>
           {touched.phone && liveErrors.phone
             ? <span className="fieldError">{liveErrors.phone}</span>
-            : <span className="hint">En az 10 rakam girin.</span>}
+            : <span className="hint">Enter at least 10 digits.<br /><small>En az 10 rakam girin.</small></span>}
         </label>
 
         {/* Department */}
         <div className="field fieldSpan2">
-          <span className="label">Bölüm Seçin</span>
+          <span className="label">Choose Department<br /><small>Bölüm Seçin</small></span>
           <div className="deptGrid">
             {clinicDepts.map(([key, info]) => (
               <button
@@ -238,7 +242,7 @@ export function AppointmentForm({ initialDepartment, onCreated }) {
               >
                 <span className="deptIcon">{info.icon}</span>
                 <span className="deptLabel">{info.label}</span>
-                <span className="deptSub">{key}</span>
+                <span className="deptSub">{info.trLabel}</span>
               </button>
             ))}
           </div>
@@ -248,7 +252,7 @@ export function AppointmentForm({ initialDepartment, onCreated }) {
         {/* Doctor Selection */}
         {department && (
           <div className="field fieldSpan2">
-            <span className="label">Doktor Seçin</span>
+            <span className="label">Choose Doctor<br /><small>Doktor Seçin</small></span>
             <div className="doctorGrid">
               {availableDoctors.map((doc) => (
                 <button
@@ -269,7 +273,7 @@ export function AppointmentForm({ initialDepartment, onCreated }) {
 
         {/* Date */}
         <label className="field">
-          <span className="label">Tarih</span>
+          <span className="label">Date<br /><small>Tarih</small></span>
           <div className="inputWrap">
             <span className="inputIcon" aria-hidden="true">📅</span>
             <input
@@ -288,17 +292,17 @@ export function AppointmentForm({ initialDepartment, onCreated }) {
         {/* Time Slots */}
         <div className="field fieldSpan2">
           <div className="fieldHead">
-            <span className="label">Saat Seçin</span>
+            <span className="label">Choose Time<br /><small>Saat Seçin</small></span>
             <div className="legend" aria-label="Saat durumu">
-              <span className="legendItem"><span className="legendDot legendAvail" />Müsait</span>
-              <span className="legendItem"><span className="legendDot legendFull" />Dolu</span>
-              <span className="legendItem"><span className="legendDot legendSel" />Seçili</span>
+              <span className="legendItem"><span className="legendDot legendAvail" />Available</span>
+              <span className="legendItem"><span className="legendDot legendFull" />Full</span>
+              <span className="legendItem"><span className="legendDot legendSel" />Selected</span>
             </div>
           </div>
 
           {!date || !doctor ? (
             <div className="hint">
-              {!doctor ? "Lütfen önce bir doktor seçin." : "Lütfen önce bir tarih seçin."}
+              {!doctor ? "Please select a doctor first." : "Please select a date first."}
             </div>
           ) : (
             <div className="slotGrid" role="list" aria-label="Saat dilimleri">
@@ -315,7 +319,7 @@ export function AppointmentForm({ initialDepartment, onCreated }) {
                     role="listitem"
                   >
                     <span className="slotTime">{slot}</span>
-                    {isBooked && <span className="slotTag">Dolu</span>}
+                    {isBooked && <span className="slotTag">Full</span>}
                   </button>
                 );
               })}
@@ -328,14 +332,14 @@ export function AppointmentForm({ initialDepartment, onCreated }) {
       {/* Confirmation card */}
       {confirmation && (
         <div className="confirmCard" role="status" aria-live="polite">
-          <div className="confirmTitle">✅ Randevu Onaylandı</div>
+          <div className="confirmTitle">✅ Appointment Confirmed</div>
           <div className="confirmGrid">
-            <div className="confirmItem"><div className="confirmLabel">Ad Soyad</div><div className="confirmValue">{confirmation.name}</div></div>
-            <div className="confirmItem"><div className="confirmLabel">Telefon</div><div className="confirmValue">{confirmation.phoneDisplay}</div></div>
-            <div className="confirmItem"><div className="confirmLabel">Bölüm</div><div className="confirmValue">{confirmation.department}</div></div>
-            <div className="confirmItem"><div className="confirmLabel">Doktor</div><div className="confirmValue">{confirmation.doctor}</div></div>
-            <div className="confirmItem"><div className="confirmLabel">Tarih</div><div className="confirmValue">{confirmation.date}</div></div>
-            <div className="confirmItem"><div className="confirmLabel">Saat</div><div className="confirmValue">{confirmation.time}</div></div>
+            <div className="confirmItem"><div className="confirmLabel">Full Name</div><div className="confirmValue">{confirmation.name}</div></div>
+            <div className="confirmItem"><div className="confirmLabel">Phone</div><div className="confirmValue">{confirmation.phoneDisplay}</div></div>
+            <div className="confirmItem"><div className="confirmLabel">Department</div><div className="confirmValue">{confirmation.department}</div></div>
+            <div className="confirmItem"><div className="confirmLabel">Doctor</div><div className="confirmValue">{confirmation.doctor}</div></div>
+            <div className="confirmItem"><div className="confirmLabel">Date</div><div className="confirmValue">{confirmation.date}</div></div>
+            <div className="confirmItem"><div className="confirmLabel">Time</div><div className="confirmValue">{confirmation.time}</div></div>
           </div>
         </div>
       )}
@@ -344,9 +348,9 @@ export function AppointmentForm({ initialDepartment, onCreated }) {
 
       <button className="btn btnPrimary btnLarge" disabled={!canSubmit} type="submit">
         {isSubmitting ? (
-          <><span className="spinner" aria-hidden="true" />Gönderiliyor...</>
+          <><span className="spinner" aria-hidden="true" />Submitting...</>
         ) : (
-          "Randevu Al"
+          "Book Appointment"
         )}
       </button>
     </form>

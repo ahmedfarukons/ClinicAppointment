@@ -31,31 +31,45 @@ class MedicalAnswer(BaseModel):
 
 
 STRUCTURED_PROMPT = """\
-Sen bir klinik bilgi asistanısın. Hastan sana soru sordu ya da şikayetini aktardı.
+You are a clinical information assistant. The patient asked a question or described symptoms.
 
-Kurallar:
-1. Eğer sağlanan CONTEXT (bağlam) kaynakları mevcutsa onları kullan ve kaynak ID'lerini belirt.
-2. Eğer sağlanan kaynaklar yetersiz veya yoksa, kendi tıbbi bilginle ayrıntılı ve doğru bir yanıt ver.
-3. Her zaman şu uyarıyı ekle: "Bu bilgi yalnızca genel bilgilendirme amaçlıdır; kesin tanı için mutlaka bir uzmana başvurun."
-4. Cevabının sonunda hastaya 1-2 takip sorusu öner.
-5. ÖNEMLI: Yanıtını MUTLAKA Türkçe ver (kullanıcı başka bir dilde yazdıysa da).
-6. Yanıt kaliteli, sıcak ve profesyonel olsun.
+Rules:
+1. If CONTEXT sources are provided, use them and include source IDs.
+2. If the provided sources are limited or missing, answer accurately using your medical knowledge.
+3. Always include this warning: "This information is for general guidance only and does not replace professional medical diagnosis."
+4. End your response with 1-2 suggested follow-up questions for the patient.
+5. IMPORTANT: Always respond in English.
+6. CONTEXT may contain non-English text. Translate and summarize it in English; never copy non-English source text into the answer.
+7. Keep the response high-quality, warm, and professional.
 
 CONTEXT:
 {context}
 
-SORU/ŞİKAYET: {question}
+QUESTION/SYMPTOM: {question}
 
-Aşağıdaki JSON şemasıyla yanıt ver (markdown yok, sadece JSON):
+Respond in the following JSON schema (no markdown, JSON only):
 {{
-  "answer": "Türkçe klinik yanıtın burada...",
+  "answer": "Your clinical response in English...",
   "citations": [
-    {{"source_id": "ID", "relevance": "Neden ilgili"}}
+    {{"source_id": "ID", "relevance": "Why this source is relevant"}}
   ],
-  "confidence_reasoning": "Güven düzeyi açıklaması",
-  "follow_up_questions": ["Soru 1?", "Soru 2?"]
+  "confidence_reasoning": "Why confidence is at this level",
+  "follow_up_questions": ["Follow-up question 1?", "Follow-up question 2?"]
 }}
 """
+
+
+def _contains_turkish(text: str) -> bool:
+    lowered = text.lower()
+    if any(char in lowered for char in "çğıöşü"):
+        return True
+    turkish_markers = {
+        "baş", "ağrı", "ağrıyor", "doktor", "randevu", "şikayet",
+        "belirti", "tedavi", "muayene", "hastalık", "göğüs", "nefes",
+        "bulantı", "başvuru", "sağlık", "acil", "önerilir",
+    }
+    words = set(lowered.replace(".", " ").replace(",", " ").split())
+    return bool(words & turkish_markers)
 
 
 def generate_structured_answer(
@@ -80,15 +94,15 @@ def generate_structured_answer(
 
         if sources:
             context_block = "\n\n".join(
-                f"[Kaynak {s.id}] (skor: {s.score}): {s.snippet}" for s in sources
+                f"[Source {s.id}] (score: {s.score}): {s.snippet}" for s in sources
             )
         else:
-            context_block = "Klinik veritabanında bu konu için özel kaynak bulunamadı. Kendi tıbbi bilginle yanıt ver."
+            context_block = "No dedicated source was found in the clinical database for this query. Use your medical knowledge."
 
         prompt = STRUCTURED_PROMPT.format(context=context_block, question=question)
 
         response = llm.invoke([
-            SystemMessage(content="Sen bir Türkçe tıbbi asistansın. Sadece geçerli JSON döndür."),
+            SystemMessage(content="You are an English clinical assistant. Return valid JSON only. All string values must be in English, never Turkish."),
             HumanMessage(content=prompt),
         ])
 
@@ -103,6 +117,18 @@ def generate_structured_answer(
                 raw = raw[:-3].strip()
 
         structured = MedicalAnswer.model_validate_json(raw)
+        combined_text = " ".join(
+            [
+                structured.answer,
+                structured.confidence_reasoning,
+                " ".join(structured.follow_up_questions),
+                " ".join(c.relevance for c in structured.citations),
+            ]
+        )
+        if _contains_turkish(combined_text):
+            logger.warning("structured_output_non_english_detected")
+            return _fallback(sources, question)
+
         avg_score = sum(s.score for s in sources) / len(sources) if sources else 0.75
         confidence = round(min(0.95, avg_score * 0.9), 2) if sources else 0.75
 
@@ -123,16 +149,18 @@ def _fallback(sources: list[SourceEvidence], question: str = "") -> tuple[str, f
     if sources:
         top = sources[0]
         answer = (
-            f"Aldığımız bilgilere göre (skor: {top.score}):\n\n"
-            f"{top.snippet}\n\n"
-            "Bu bilgi yalnızca genel bilgilendirme amaçlıdır; kesin tanı için mutlaka bir uzmana başvurun."
+            f"I found relevant clinical evidence for your concern from {top.title} "
+            f"(source {top.id}, score: {top.score}). Please share how long the symptom has been present, "
+            "how severe it is, and whether you have warning signs such as chest pain, shortness of breath, "
+            "fainting, weakness, confusion, severe vomiting, or a sudden severe headache.\n\n"
+            "This information is for general guidance only and does not replace professional medical diagnosis."
         )
         avg_score = sum(s.score for s in sources) / len(sources)
         return answer, round(min(0.95, avg_score * 0.85), 2), None
     else:
         answer = (
-            "Şikayetinizi aldım. Kliniğimizdeki uzmanlardan birinin sizi muayene etmesi en doğru sonucu verecektir. "
-            "Aşağıdaki butona tıklayarak ilgili bölümden randevu alabilirsiniz."
+            "I received your concern. A direct clinical examination by one of our specialists will provide the most accurate outcome. "
+            "You can continue by booking an appointment with the relevant department."
         )
         return answer, 0.60, None
 

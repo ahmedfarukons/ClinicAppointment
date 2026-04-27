@@ -32,7 +32,7 @@ You are a clinical information assistant. Your rules:
 3. At the end of each answer, cite which source(s) you relied on.
 4. Do not give a definitive diagnosis or treatment; always add the disclaimer: "This information is for informational purposes only."
 5. If you detect emergency symptoms, direct the patient to 911 or the nearest emergency room.
-6. IMPORTANT: Always reply in the same language the user writes in (e.g., if Turkish, reply in Turkish).
+6. IMPORTANT: Always reply in English, even if the user writes in another language.
 """
 
 
@@ -47,8 +47,9 @@ def _fallback_answer(question: str, sources: list[SourceEvidence]) -> tuple[str,
 
     top = sources[0]
     answer = (
-        f"Closest source information for your question (score: {top.score}):\n\n"
-        f"{top.snippet}\n\n"
+        f"I found relevant clinical evidence for your question from {top.title} "
+        f"(source {top.id}, score: {top.score}). Please describe the symptom duration, severity, "
+        "and any warning signs so a clinician can guide you more accurately.\n\n"
         "This information is for informational purposes only; "
         "a definitive diagnosis requires physician evaluation."
     )

@@ -14,10 +14,10 @@ import {
 import { ApiError } from "../services/api";
 
 const QUICK_PROMPTS = [
-  "Baş ağrısı için ne zaman doktora gitmeliyim?",
-  "Kardiyoloji randevusu almak istiyorum",
-  "Cildimde kızarıklık ve kaşıntı var",
-  "Kan tahlili yaptırmak istiyorum",
+  "When should I see a doctor for headache?",
+  "I want to book a cardiology appointment",
+  "I have skin redness and itching",
+  "I want to get a blood test",
 ];
 
 const ROUTE_LABELS = {
@@ -95,7 +95,7 @@ function AuthPanel({ mode, setMode, onSubmit, loading, error }) {
             className="input"
             minLength={3}
             onChange={(event) => setUsername(event.target.value)}
-            placeholder="ornek_kullanici"
+            placeholder="example_user"
             required
             type="text"
             value={username}
@@ -211,7 +211,7 @@ function MessageList({ messages, sending }) {
   if (!messages.length && !sending) {
     return (
       <div className="aiWelcome">
-        <div className="aiWelcomeIcon">+</div>
+        <div className="aiWelcomeIcon">☾</div>
         <h2>How can I help?</h2>
         <p>
           Ask about symptoms, appointment requests, or clinical information. In
@@ -225,7 +225,7 @@ function MessageList({ messages, sending }) {
     <div className="aiMessages" aria-live="polite">
       {messages.map((message) => (
         <article className={`aiMessage ${message.role}`} key={message.id}>
-          <div className="aiAvatar">{message.role === "user" ? "Siz" : "AI"}</div>
+          <div className="aiAvatar">{message.role === "user" ? "You" : "AI"}</div>
           <div className="aiBubbleWrap">
             {message.route ? (
               <span className={`routePill ${message.route}`}>{routeLabel(message.route)}</span>
@@ -235,14 +235,14 @@ function MessageList({ messages, sending }) {
             {message.suggested_department ? (
               <div className="appointmentCTA">
                 <div className="appointmentCTAText">
-                  🏥 <strong>{message.suggested_department}</strong> bölümünden randevu alabilirsiniz.
+                  🏥 You can book an appointment with <strong>{message.suggested_department}</strong>.
                 </div>
                 <Link
                   to={`/appointment?department=${encodeURIComponent(message.suggested_department)}`}
                   className="btn btnPrimary"
                   style={{ display: "inline-flex", alignItems: "center", gap: "8px", marginTop: "8px" }}
                 >
-                  📅 Randevu Al
+                  📅 Book Appointment
                 </Link>
               </div>
             ) : null}
@@ -489,7 +489,7 @@ export function AIAssistant() {
             </div>
           </aside>
 
-          <section className="aiChatCard" aria-label="AI asistan sohbeti">
+          <section className="aiChatCard" aria-label="AI assistant chat">
             <div className="aiChatTop">
               <div>
                 <div className="panelTitle">

@@ -6,7 +6,7 @@ export function Navbar() {
       <div className="container navbarInner">
         <NavLink to="/" className="brand" aria-label="Clinic home">
           <span className="brandMark" aria-hidden="true">
-            +
+            ☾
           </span>
           <div className="brandText">
             <div className="brandTitle">Blue Clinic</div>
