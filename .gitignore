@@ -1,0 +1,18 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.env
+
+# Database
+data/*.db
+qdrant_data/
+
+# Frontend
+frontend/node_modules/
+frontend/build/
+.DS_Store
+
+# Docker
+docker-compose.override.yml

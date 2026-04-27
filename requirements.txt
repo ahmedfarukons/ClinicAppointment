@@ -1,0 +1,46 @@
+fastapi
+uvicorn
+pydantic
+pydantic-settings
+python-dotenv
+
+# Embeddings & Vector Store
+sentence-transformers
+qdrant-client
+
+# LLM (Google Gemini)
+langchain
+langchain-core
+langchain-google-genai
+
+# RAG Evaluation
+ragas
+datasets
+
+# Data processing
+pandas
+kagglehub
+
+# Database / ORM
+sqlalchemy
+aiosqlite
+
+# Authentication
+python-jose[cryptography]
+bcrypt
+
+# Rate Limiting
+slowapi
+
+# Structured Logging
+structlog
+
+# Linting (dev)
+ruff
+
+# Testing
+pytest
+pytest-asyncio
+
+# Numerics (for HyDE embedding blending)
+numpy
