@@ -40,19 +40,19 @@ def _extract_date(message: str) -> Optional[str]:
 
 def _extract_department_fast(message: str) -> Optional[str]:
     """
-    Hızlı iki aşamalı eşleştirme:
-    1. KEYWORD_MAP: Çok kelimeli ifadeler önce kontrol edilir.
-    2. DEPARTMENT_QUESTIONS: Kullanıcı mesajı örnek sorulara token benzerliği.
+    Fast two-stage matching:
+    1. KEYWORD_MAP: multi-word phrases are checked first.
+    2. DEPARTMENT_QUESTIONS: token similarity with sample patient questions.
     """
     text = message.lower().strip()
 
-    # 1. Anahtar kelime tablosu (uzun ifadeler önce)
+    # 1. Keyword map (longer phrases first)
     sorted_keywords = sorted(KEYWORD_MAP.keys(), key=len, reverse=True)
     for kw in sorted_keywords:
         if kw in text:
             return KEYWORD_MAP[kw]
 
-    # 2. Örnek sorulara token benzerliği
+    # 2. Token similarity with sample questions
     text_tokens = set(re.findall(r"\w+", text))
     best_dept = None
     best_score = 0.0
@@ -70,13 +70,13 @@ def _extract_department_fast(message: str) -> Optional[str]:
 
 
 def _extract_department(message: str) -> str:
-    """Departmanı tespit et — her zaman bir sonuç döndürür."""
-    # Önce hızlı eşleştirme
+    """Detect the department and always return a result."""
+    # Fast rule-based match first
     fast = _extract_department_fast(message)
     if fast:
         return fast
 
-    # LLM denemesi
+    # LLM fallback
     from app.services.llm_service import _get_llm
     llm = _get_llm()
     if llm is None:
@@ -86,10 +86,10 @@ def _extract_department(message: str) -> str:
     from langchain_core.messages import HumanMessage
     prompt = f"""{TRIAGE_CONTEXT}
 
-Kullanıcı mesajı: "{message}"
+Patient message: "{message}"
 
-Yukarıdaki kılavuza göre en uygun bölümü SEÇ.
-Sadece şu 4 isimden birini yaz (başka hiçbir şey yazma):
+Choose the most appropriate department based on the guide above.
+Write only one of these 4 names and nothing else:
 Internal Medicine | Cardiology | Dermatology | Laboratory"""
     try:
         response = llm.invoke([HumanMessage(content=prompt)])
@@ -111,23 +111,23 @@ def handle_appointment(
     message: str,
 ) -> tuple[str, list[SourceEvidence], float, str, Optional[str]]:
     department = _extract_department(message)
-    dept_tr = DEPT_TR.get(department, department)
+    department_label = f"{DEPT_TR.get(department, department)} ({department})"
 
     answer = (
-        f"Belirttiğiniz şikayetlere göre **{dept_tr} ({department})** bölümünü öneriyorum. "
-        "Aşağıdaki butona tıklayarak randevu sayfasına geçebilir ve size uygun bir doktor ile saat seçebilirsiniz."
+        f"Based on the symptoms you described, I recommend the **{department_label}** department. "
+        "Click the button below to continue to the appointment page, where you can choose a suitable doctor and time."
     )
     return (
         answer,
         [
             SourceEvidence(
                 id="triage-engine",
-                title="Klinik Triaj Motoru",
-                snippet=f"Tespit edilen bölüm: {department}. Randevu sayfasına yönlendiriliyor.",
+                title="Clinical Triage Engine",
+                snippet=f"Detected department: {department}. Redirecting to the appointment page.",
                 score=0.98,
             )
         ],
         0.95,
-        "Bölüm tespit edildi; randevu formu sayfasına yönlendirme.",
+        "Department detected; redirecting to the appointment form.",
         department,
     )

@@ -88,6 +88,15 @@ class TokenResponse(BaseModel):
     token_type: str = "bearer"
 
 
+class UserProfile(BaseModel):
+    id: str
+    username: str
+    is_active: bool
+    created_at: str
+    session_count: int = 0
+    appointment_count: int = 0
+
+
 # --- Session models ---
 class SessionInfo(BaseModel):
     id: str

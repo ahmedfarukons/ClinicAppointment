@@ -9,6 +9,7 @@
 const state = {
   token: localStorage.getItem('cd_token') || null,
   username: localStorage.getItem('cd_username') || null,
+  userProfile: null,
   currentSessionId: null,
   isSending: false,
 };
@@ -96,14 +97,16 @@ async function handleRegister(e) {
 function saveAuth(token, username) {
   state.token = token;
   state.username = username;
+  state.userProfile = null;
   localStorage.setItem('cd_token', token);
   localStorage.setItem('cd_username', username);
 }
 
 function logout() {
-  state.token = null; state.username = null; state.currentSessionId = null;
+  state.token = null; state.username = null; state.userProfile = null; state.currentSessionId = null;
   localStorage.removeItem('cd_token'); localStorage.removeItem('cd_username');
   document.getElementById('auth-overlay').classList.remove('hidden');
+  closeProfileMenu();
   document.getElementById('sessions-list').innerHTML = '';
   clearMessages();
 }
@@ -113,12 +116,55 @@ async function initApp() {
   if (!state.token) { document.getElementById('auth-overlay').classList.remove('hidden'); return; }
   document.getElementById('auth-overlay').classList.add('hidden');
 
-  // Update user display
-  const initials = (state.username || '?').slice(0, 2).toUpperCase();
-  document.getElementById('user-avatar').textContent = initials;
-  document.getElementById('user-name-display').textContent = state.username;
+  renderProfile();
 
+  await loadProfile();
   await loadSessions();
+}
+
+async function loadProfile() {
+  try {
+    const res = await API.get('/auth/me');
+    if (!res.ok) return;
+    state.userProfile = await res.json();
+    state.username = state.userProfile.username;
+    localStorage.setItem('cd_username', state.username);
+    renderProfile();
+  } catch (err) {
+    if (err.message !== 'unauthorized') renderProfile();
+  }
+}
+
+function renderProfile() {
+  const profile = state.userProfile || {};
+  const username = profile.username || state.username || 'User';
+  const initials = username.slice(0, 2).toUpperCase();
+  const isActive = profile.is_active !== false;
+
+  document.getElementById('user-avatar').textContent = initials;
+  document.getElementById('profile-avatar').textContent = initials;
+  document.getElementById('user-name-display').textContent = username;
+  document.getElementById('profile-name').textContent = username;
+  document.getElementById('profile-status').textContent = isActive ? 'Active account' : 'Inactive account';
+  document.getElementById('profile-status').style.color = isActive ? 'var(--success)' : 'var(--danger)';
+  document.getElementById('profile-session-count').textContent = profile.session_count ?? '—';
+  document.getElementById('profile-appointment-count').textContent = profile.appointment_count ?? '—';
+  document.getElementById('profile-created-at').textContent = formatDate(profile.created_at);
+}
+
+function toggleProfileMenu() {
+  const panel = document.getElementById('profile-panel');
+  const btn = document.getElementById('profile-btn');
+  const isOpen = panel.classList.toggle('hidden') === false;
+  btn.setAttribute('aria-expanded', String(isOpen));
+}
+
+function closeProfileMenu() {
+  const panel = document.getElementById('profile-panel');
+  const btn = document.getElementById('profile-btn');
+  if (!panel || !btn) return;
+  panel.classList.add('hidden');
+  btn.setAttribute('aria-expanded', 'false');
 }
 
 // ── Sessions ──────────────────────────────────────────────
@@ -430,6 +476,13 @@ function escHtml(str) {
     .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
+function formatDate(value) {
+  if (!value) return '—';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '—';
+  return date.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+}
+
 function showToast(msg, type = 'info') {
   const container = document.getElementById('toast-container');
   const toast = document.createElement('div');
@@ -440,4 +493,10 @@ function showToast(msg, type = 'info') {
 }
 
 // ── Boot ──────────────────────────────────────────────────
+document.addEventListener('click', (e) => {
+  if (!document.getElementById('profile-menu')?.contains(e.target)) closeProfileMenu();
+});
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') closeProfileMenu();
+});
 initApp();

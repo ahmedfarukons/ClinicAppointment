@@ -73,10 +73,34 @@
     <div id="sessions-list" role="list" aria-label="Previous sessions"></div>
 
     <div id="sidebar-footer">
-      <div id="user-info">
-        <div class="user-avatar" id="user-avatar">?</div>
-        <span class="user-name" id="user-name-display">—</span>
-        <button id="logout-btn" onclick="logout()" aria-label="Logout">⏻</button>
+      <div id="profile-menu">
+        <button id="profile-btn" type="button" onclick="toggleProfileMenu()" aria-haspopup="true" aria-expanded="false" aria-controls="profile-panel">
+          <span class="user-avatar" id="user-avatar">?</span>
+          <span class="user-name" id="user-name-display">—</span>
+          <span class="profile-chevron" aria-hidden="true">⌄</span>
+        </button>
+        <div id="profile-panel" class="hidden" role="menu" aria-label="Profile details">
+          <div class="profile-panel-header">
+            <div class="user-avatar profile-avatar" id="profile-avatar">?</div>
+            <div>
+              <div class="profile-name" id="profile-name">—</div>
+              <div class="profile-status" id="profile-status">Active account</div>
+            </div>
+          </div>
+          <div class="profile-detail">
+            <span>Chats</span>
+            <strong id="profile-session-count">0</strong>
+          </div>
+          <div class="profile-detail">
+            <span>Appointments</span>
+            <strong id="profile-appointment-count">0</strong>
+          </div>
+          <div class="profile-detail">
+            <span>Member since</span>
+            <strong id="profile-created-at">—</strong>
+          </div>
+          <button id="logout-btn" type="button" onclick="logout()" role="menuitem">Sign out</button>
+        </div>
       </div>
     </div>
   </aside>

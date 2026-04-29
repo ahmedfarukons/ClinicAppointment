@@ -26,6 +26,7 @@ from sqlalchemy.orm import Session
 
 from app.config import settings
 from app.database import get_db, init_db
+from app.db_models import AppointmentRow
 from app.logging_config import setup_logging
 from app.middleware import RequestLoggingMiddleware
 from app.middleware.rate_limiter import limiter
@@ -37,6 +38,7 @@ from app.models import (
     RegisterRequest,
     SessionInfo,
     TokenResponse,
+    UserProfile,
 )
 from app.services import auth_service, session_service
 from app.services.orchestrator import run_pipeline
@@ -108,6 +110,24 @@ def login(request: Request, payload: LoginRequest, db: Session = Depends(get_db)
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
     token = auth_service.create_access_token(user.id)
     return TokenResponse(access_token=token)
+
+
+@app.get("/auth/me", response_model=UserProfile, tags=["Auth"])
+def current_user_profile(
+    user_id: str = Depends(_current_user_id),
+    db: Session = Depends(get_db),
+) -> UserProfile:
+    user = auth_service.get_user_by_id(db, user_id)
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+    return UserProfile(
+        id=user.id,
+        username=user.username,
+        is_active=user.is_active,
+        created_at=user.created_at.isoformat(),
+        session_count=len(session_service.list_sessions(db, user_id)),
+        appointment_count=db.query(AppointmentRow).filter(AppointmentRow.user_id == user_id).count(),
+    )
 
 
 # ── Sessions ──────────────────────────────────────────────────────────────────
@@ -215,7 +235,6 @@ def chat(
 
 
 # ── Appointments ──────────────────────────────────────────────────────────────
-from app.db_models import AppointmentRow
 from app.models import (
     AdminLoginRequest, AdminStats, AdminTokenResponse,
     AppointmentCreate, AppointmentResponse, AppointmentStatusUpdate,
@@ -296,7 +315,7 @@ def create_appointment(
         AppointmentRow.doctor == payload.doctor,
     ).first()
     if existing:
-        raise HTTPException(status_code=400, detail="Bu doktor bu saatte zaten dolu. Lütfen başka bir saat veya doktor seçin.")
+        raise HTTPException(status_code=400, detail="This doctor is already booked at this time. Please choose another time or doctor.")
 
     user_id = None
     auth = request.headers.get("Authorization")
@@ -326,7 +345,7 @@ def admin_login(payload: AdminLoginRequest) -> AdminTokenResponse:
     admin_user = os.environ.get("ADMIN_USERNAME", "admin")
     admin_pass = os.environ.get("ADMIN_PASSWORD", "clinic2024")
     if payload.username != admin_user or payload.password != admin_pass:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Geçersiz admin kimlik bilgileri")
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid admin credentials")
     return AdminTokenResponse(access_token=_make_admin_token())
 
 
@@ -346,7 +365,7 @@ def admin_stats(
     week_count = 0
 
     for r in all_rows:
-        dept = r.department or "Diğer"
+        dept = r.department or "Other"
         by_dept[dept] = by_dept.get(dept, 0) + 1
         st = r.status or "pending"
         by_status[st] = by_status.get(st, 0) + 1
@@ -399,10 +418,10 @@ def admin_update_status(
     db: Session = Depends(get_db),
 ) -> AppointmentResponse:
     if payload.status not in ("pending", "confirmed", "cancelled"):
-        raise HTTPException(status_code=400, detail="Geçersiz durum değeri")
+        raise HTTPException(status_code=400, detail="Invalid status value")
     row = db.query(AppointmentRow).filter(AppointmentRow.id == appt_id).first()
     if not row:
-        raise HTTPException(status_code=404, detail="Randevu bulunamadı")
+        raise HTTPException(status_code=404, detail="Appointment not found")
     row.status = payload.status
     db.commit()
     db.refresh(row)
@@ -417,7 +436,7 @@ def admin_delete_appointment(
 ) -> dict:
     row = db.query(AppointmentRow).filter(AppointmentRow.id == appt_id).first()
     if not row:
-        raise HTTPException(status_code=404, detail="Randevu bulunamadı")
+        raise HTTPException(status_code=404, detail="Appointment not found")
     db.delete(row)
     db.commit()
     return {"status": "deleted", "id": appt_id}
